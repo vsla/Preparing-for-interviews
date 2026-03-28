@@ -1,0 +1,263 @@
+<h2>9. Architecture &amp; Design Patterns <span class="topic-count">6 topics</span></h2>
+<p class="section-intro">Design patterns and architecture principles are most common in senior and lead interviews. SOLID principles, common GoF patterns, and architectural styles like event-driven or hexagonal architecture demonstrate experience beyond feature coding. Focus on knowing <em>when</em> — and when not — to apply each pattern.</p>
+
+<details>
+<summary>9.1 SOLID Principles</summary>
+<div class="details-body">
+<h4>S — Single Responsibility</h4>
+<pre><code>// Violation: one class does too many things
+class UserService {
+  saveUser(user) { db.save(user); }
+  sendWelcomeEmail(user) { emailClient.send(user.email, "Welcome!"); }
+  generateReport() { return users.map(u => u.name).join("\n"); }
+}
+// Fixed: separate concerns into focused classes
+class UserRepository { save(user) { db.save(user); } }
+class EmailService   { sendWelcome(user) { emailClient.send(user.email, "Welcome!"); } }
+class ReportService  { generate(users) { return users.map(u => u.name).join("\n"); } }</code></pre>
+
+<h4>O — Open/Closed</h4>
+<pre><code>// Open for extension, closed for modification
+// Violation: must edit AreaCalculator to add new shapes
+class AreaCalculator {
+  calculate(shape) {
+    if (shape.type === "circle") return Math.PI * shape.r ** 2;
+    if (shape.type === "square") return shape.side ** 2;
+  }
+}
+// Fixed: each shape knows its area
+class Circle    { area() { return Math.PI * this.r ** 2; } }
+class Square    { area() { return this.side ** 2; } }
+class Triangle  { area() { return 0.5 * this.base * this.height; } }
+class AreaCalculator { calculate(shape) { return shape.area(); } }</code></pre>
+
+<h4>L — Liskov Substitution</h4>
+<pre><code>// Subtypes must be substitutable for base types without altering correctness
+// Violation: Square extends Rectangle but breaks invariant
+class Rectangle {
+  setWidth(w)  { this.w = w; }
+  setHeight(h) { this.h = h; }
+  area() { return this.w * this.h; }
+}
+class Square extends Rectangle {
+  setWidth(w)  { this.w = this.h = w; } // breaks: caller expects independent dims
+  setHeight(h) { this.w = this.h = h; }
+}
+// Caller sets width=5, height=10, expects area=50 — Square returns 100</code></pre>
+
+<h4>I — Interface Segregation</h4>
+<pre><code>// Don't force implementations of unused methods
+// Violation: Robot forced to implement eat()
+interface Worker { work(): void; eat(): void; sleep(): void; }
+class Robot implements Worker {
+  work() {}
+  eat() { throw new Error("Robots don't eat!"); }
+  sleep() { throw new Error("Robots don't sleep!"); }
+}
+// Fixed: smaller interfaces
+interface Workable { work(): void; }
+interface Biological { eat(): void; sleep(): void; }
+class Human implements Workable, Biological { work(){} eat(){} sleep(){} }
+class Robot implements Workable { work(){} }</code></pre>
+
+<h4>D — Dependency Inversion</h4>
+<pre><code>// High-level modules should not depend on low-level modules
+// Violation: tight coupling to MySQL
+class UserService {
+  constructor() { this.db = new MySQLDatabase(); }
+}
+// Fixed: inject dependency via abstraction
+interface Database { findById(id: string): Promise&lt;User&gt;; }
+class UserService {
+  constructor(private db: Database) {} // inject
+}
+const service = new UserService(new PostgreSQLDatabase());
+// Easy to swap implementations and mock in tests</code></pre>
+</div>
+</details>
+
+<details>
+<summary>9.2 Other Principles</summary>
+<div class="details-body">
+<ul>
+  <li><strong>DRY</strong> (Don't Repeat Yourself): abstract duplicate code. But don't over-abstract prematurely — wrong DRY creates tight coupling.</li>
+  <li><strong>KISS</strong> (Keep It Simple): prefer simple solutions. Complexity = bugs + maintenance burden.</li>
+  <li><strong>YAGNI</strong> (You Aren't Gonna Need It): don't build features until actually needed. Avoid speculative generality.</li>
+  <li><strong>Law of Demeter</strong>: talk only to immediate friends. Avoid <code>a.getB().getC().doWork()</code>. Prefer <code>a.doWork()</code> which coordinates internally. Reduces coupling.</li>
+</ul>
+</div>
+</details>
+
+<details>
+<summary>9.3 Creational Patterns</summary>
+<div class="details-body">
+<pre><code>// Singleton: one shared instance
+class Database {
+  static #instance = null;
+  static getInstance() {
+    if (!Database.#instance) Database.#instance = new Database();
+    return Database.#instance;
+  }
+}
+// Drawbacks: global state, hard to test, hidden dependencies
+
+// Factory Method: create objects without specifying class
+class NotificationFactory {
+  static create(type) {
+    const types = { email: EmailNotification, sms: SMSNotification, push: PushNotification };
+    if (!types[type]) throw new Error(`Unknown: ${type}`);
+    return new types[type]();
+  }
+}
+
+// Builder: construct complex objects step by step
+class QueryBuilder {
+  #parts = { table: "", conditions: [], limit: null, order: null };
+  from(t)   { this.#parts.table = t; return this; }
+  where(c)  { this.#parts.conditions.push(c); return this; }
+  limit(n)  { this.#parts.limit = n; return this; }
+  orderBy(c){ this.#parts.order = c; return this; }
+  build() {
+    let sql = `SELECT * FROM ${this.#parts.table}`;
+    if (this.#parts.conditions.length) sql += ` WHERE ${this.#parts.conditions.join(" AND ")}`;
+    if (this.#parts.order)  sql += ` ORDER BY ${this.#parts.order}`;
+    if (this.#parts.limit)  sql += ` LIMIT ${this.#parts.limit}`;
+    return sql;
+  }
+}
+const q = new QueryBuilder().from("users").where("active = true").limit(10).build();</code></pre>
+</div>
+</details>
+
+<details>
+<summary>9.4 Structural Patterns</summary>
+<div class="details-body">
+<pre><code>// Adapter: bridge incompatible interfaces
+class LegacyPayment  { makePayment(amount, currency, cardNum) {} }
+class PaymentAdapter {
+  constructor(legacy) { this.legacy = legacy; }
+  process({ amount, currency, card }) {
+    return this.legacy.makePayment(amount, currency, card.number);
+  }
+}
+
+// Decorator: add behavior without modifying original
+function withLogging(fn) {
+  return async function(...args) {
+    console.log(`Calling ${fn.name}`, args);
+    const result = await fn.apply(this, args);
+    console.log(`${fn.name} returned`, result);
+    return result;
+  };
+}
+
+// Facade: simplified interface to complex subsystem
+class HomeTheaterFacade {
+  watchMovie(movie) {
+    this.lights.dim(10);
+    this.projector.on();
+    this.amplifier.setVolume(5);
+    this.dvd.play(movie);
+  }
+}
+
+// Repository: abstract data access
+class UserRepository {
+  async findById(id)       { return db.query("SELECT * FROM users WHERE id=$1", [id]); }
+  async findByEmail(email) { return db.query("SELECT * FROM users WHERE email=$1", [email]); }
+  async save(user)         { /* INSERT or UPDATE logic */ }
+  async delete(id)         { return db.query("DELETE FROM users WHERE id=$1", [id]); }
+}</code></pre>
+</div>
+</details>
+
+<details>
+<summary>9.5 Behavioral Patterns</summary>
+<div class="details-body">
+<pre><code>// Observer / EventBus
+class EventBus {
+  #listeners = new Map();
+  on(event, handler) {
+    if (!this.#listeners.has(event)) this.#listeners.set(event, []);
+    this.#listeners.get(event).push(handler);
+    return () => this.off(event, handler);  // returns unsubscribe function
+  }
+  off(event, handler) {
+    this.#listeners.set(event, (this.#listeners.get(event) || []).filter(h => h !== handler));
+  }
+  emit(event, data) { (this.#listeners.get(event) || []).forEach(h => h(data)); }
+}
+
+// Strategy: interchangeable algorithms
+class Sorter {
+  constructor(strategy) { this.strategy = strategy; }
+  sort(data) { return this.strategy(data); }
+}
+const ascending  = new Sorter(arr => [...arr].sort((a,b) => a-b));
+const descending = new Sorter(arr => [...arr].sort((a,b) => b-a));
+
+// Command: encapsulate request as object (enables undo/redo)
+class TextEditor {
+  #history = [];
+  execute(command) { command.execute(); this.#history.push(command); }
+  undo() { this.#history.pop()?.undo(); }
+}
+
+// Chain of Responsibility: pass through handler chain
+class Handler {
+  setNext(h) { this.next = h; return h; }
+  handle(req) { return this.next?.handle(req); }
+}
+class AuthHandler extends Handler {
+  handle(req) {
+    if (!req.headers.authorization) return { status: 401 };
+    return super.handle(req);
+  }
+}
+class RateLimitHandler extends Handler {
+  handle(req) {
+    if (isRateLimited(req.ip)) return { status: 429 };
+    return super.handle(req);
+  }
+}</code></pre>
+</div>
+</details>
+
+<details>
+<summary>9.6 Architectural Patterns</summary>
+<div class="details-body">
+<pre><code>// MVC: Model (data/logic) — View (UI) — Controller (glue)
+// MVP: Model — View (passive, dumb) — Presenter (all logic, updates view)
+// MVVM: Model — View — ViewModel (data bindings, two-way reactive)
+
+// Clean Architecture (Hexagonal / Ports and Adapters)
+// Core rule: dependencies point INWARD only
+// Entities (enterprise rules) <-- Use Cases <-- Interface Adapters <-- Frameworks
+
+// Suggested structure:
+// src/domain/         entities, value objects, domain events
+// src/application/    use cases, DTOs, ports (interfaces)
+// src/infrastructure/ DB adapters, HTTP clients, email, Redis
+// src/interfaces/     HTTP controllers, GraphQL resolvers, CLI
+
+// Domain-Driven Design (DDD) key concepts:
+// Bounded Context: explicit boundary where a domain model applies
+// Aggregate: cluster of objects with one root (consistency boundary)
+// Repository: collection-like interface for aggregates
+// Domain Event: something significant that happened in the domain
+// Value Object: no identity, equality by value (Money, Address, Email)
+// Entity: has identity (User, Order, Product)</code></pre>
+</div>
+</details>
+
+<div class="key-takeaways">
+  <h3>⚡ Key Takeaways</h3>
+  <ul>
+    <li>SOLID: each principle addresses a different failure mode — don't memorize definitions, memorize the problems they prevent</li>
+    <li>Dependency Inversion: high-level modules depend on abstractions, not implementations — enables testability via mocks</li>
+    <li>Factory and Builder patterns decouple object creation from usage; use Builder for objects with many optional parameters</li>
+    <li>Observer pattern is publish/subscribe without a broker; EventEmitter and RxJS observables implement this</li>
+    <li>Strangler Fig pattern is the safest way to migrate a monolith: incrementally route traffic to new services</li>
+    <li>Hexagonal architecture (Ports and Adapters): domain logic is completely independent of frameworks and databases</li>
+  </ul>
+</div>

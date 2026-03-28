@@ -1,0 +1,156 @@
+<h2>10. TypeScript (Deep) <span class="topic-count">2 topics</span></h2>
+<p class="section-intro">TypeScript questions appear in most modern frontend and fullstack interviews. Interviewers test generics, conditional types, mapped types, and utility types — not just basic annotations. Understanding structural typing and how TypeScript interacts with JavaScript runtime behavior is the real differentiator.</p>
+
+<details>
+<summary>10.1 Type System</summary>
+<div class="details-body">
+<h4>type vs interface</h4>
+<table>
+  <tr><th>Feature</th><th>interface</th><th>type</th></tr>
+  <tr><td>Declaration merging</td><td>Yes (augmentation)</td><td>No</td></tr>
+  <tr><td>Extends syntax</td><td>extends keyword</td><td>&amp; (intersection)</td></tr>
+  <tr><td>Computed properties</td><td>No</td><td>Yes</td></tr>
+  <tr><td>Union types</td><td>No</td><td>Yes</td></tr>
+  <tr><td>Primitive aliases</td><td>No</td><td>Yes</td></tr>
+  <tr><td>Best for</td><td>Object shapes, public APIs</td><td>Unions, aliases, complex types</td></tr>
+</table>
+
+<h4>any vs unknown vs never</h4>
+<pre><code>let a: any    = "hello"; a.foo();    // no error — opts out of type checking
+let u: unknown = "hello"; u.foo();   // Error — must narrow first
+if (typeof u === "string") u.toUpperCase(); // OK after narrowing
+
+// never: value that never exists
+function fail(msg: string): never { throw new Error(msg); }
+function assertExhaustive(x: never): never { throw new Error("Not exhaustive: " + x); }
+
+// Exhaustiveness check with discriminated unions
+type Shape = { kind: "circle"; radius: number } | { kind: "square"; side: number };
+function area(s: Shape): number {
+  switch (s.kind) {
+    case "circle": return Math.PI * s.radius ** 2;
+    case "square": return s.side ** 2;
+    default: return assertExhaustive(s); // Error if new case added
+  }
+}</code></pre>
+
+<h4>Generics</h4>
+<pre><code>// Basic generic
+function identity&lt;T&gt;(arg: T): T { return arg; }
+
+// Constrained generic
+function getLength&lt;T extends { length: number }&gt;(arg: T): number {
+  return arg.length;
+}
+
+// Generic with default
+interface Box&lt;T = string&gt; { value: T; }
+const b: Box = { value: "hello" }; // T defaults to string
+
+// Generic interface
+interface Repository&lt;T, ID = string&gt; {
+  findById(id: ID): Promise&lt;T | null&gt;;
+  save(entity: T): Promise&lt;T&gt;;
+  delete(id: ID): Promise&lt;void&gt;;
+}</code></pre>
+
+<h4>Utility Types</h4>
+<pre><code>type User = { id: number; name: string; email: string; role: string; };
+
+type PartialUser   = Partial&lt;User&gt;;                     // all optional
+type RequiredUser  = Required&lt;Partial&lt;User&gt;&gt;;           // all required
+type ReadonlyUser  = Readonly&lt;User&gt;;                    // all readonly
+type UserPreview   = Pick&lt;User, "id" | "name"&gt;;         // subset
+type UserNoId      = Omit&lt;User, "id"&gt;;                  // exclude
+type StringOrNum   = Exclude&lt;string | number | boolean, boolean&gt;; // string | number
+type OnlyStrNum    = Extract&lt;string | number | boolean, string | number&gt;;
+type NotNull       = NonNullable&lt;string | null | undefined&gt;; // string
+type Fn = (x: number, y: string) =&gt; boolean;
+type Ret  = ReturnType&lt;Fn&gt;;       // boolean
+type Args = Parameters&lt;Fn&gt;;       // [x: number, y: string]
+type PromResult = Awaited&lt;Promise&lt;string&gt;&gt;; // string</code></pre>
+
+<h4>Mapped Types</h4>
+<pre><code>type Optional&lt;T&gt; = { [K in keyof T]?: T[K] };
+type Nullable&lt;T&gt; = { [K in keyof T]: T[K] | null };
+type Mutable&lt;T&gt;  = { -readonly [K in keyof T]: T[K] }; // remove readonly
+type ReadonlyPartial&lt;T&gt; = { readonly [K in keyof T]?: T[K] };</code></pre>
+
+<h4>Conditional Types &amp; infer</h4>
+<pre><code>type IsArray&lt;T&gt; = T extends any[] ? true : false;
+type Flatten&lt;T&gt; = T extends Array&lt;infer Item&gt; ? Item : T;
+type UnwrapPromise&lt;T&gt; = T extends Promise&lt;infer R&gt; ? R : T;
+type FirstArg&lt;T extends (...args: any) =&gt; any&gt; =
+  T extends (first: infer F, ...rest: any) =&gt; any ? F : never;</code></pre>
+
+<h4>Template Literal Types &amp; satisfies</h4>
+<pre><code>type EventName = "click" | "focus" | "blur";
+type HandlerName = `on${Capitalize&lt;EventName&gt;}`; // "onClick" | "onFocus" | "onBlur"
+type CSSProperties = `${string}-${string}`;
+
+// satisfies: check type without widening
+const config = { port: 3000, host: "localhost" } satisfies Record&lt;string, string | number&gt;;
+config.port.toFixed(); // TS knows it's number (not widened to string|number)
+
+// as const: infer narrowest type
+const routes = ["home", "about", "contact"] as const;
+type Route = typeof routes[number]; // "home" | "about" | "contact"
+
+// Module augmentation
+declare module "express" {
+  interface Request { user?: User; correlationId?: string; }
+}</code></pre>
+</div>
+</details>
+
+<details>
+<summary>10.2 Tricky TypeScript Questions</summary>
+<div class="details-body">
+<div class="tricky-box">
+<h4>Common gotchas</h4>
+<pre><code>// Q: Why does narrowing not work inside callbacks?
+let x: string | null = "hello";
+setTimeout(() => {
+  x.toUpperCase(); // Error: x might be null (could change before callback)
+}, 0);
+// Fix: capture value
+const copy = x;
+setTimeout(() => copy?.toUpperCase(), 0);
+
+// Q: Structural typing — same structure = compatible
+interface Cat { meow(): void; }
+interface Dog { meow(): void; } // same shape
+const cat: Cat = { meow() {} };
+const dog: Dog = cat; // OK! TS uses structural (not nominal) typing
+
+// Q: Type widening with const
+let x = 3;        // type: number (widened)
+const y = 3;      // type: 3 (literal, not widened)
+const z = [1,2,3] as const; // type: readonly [1, 2, 3]
+
+// Q: keyof typeof
+const obj = { a: 1, b: 2, c: 3 };
+type Keys = keyof typeof obj; // "a" | "b" | "c"
+function getValue(o: typeof obj, key: Keys) { return o[key]; }
+
+// Q: Conditional distribution
+type ToArray&lt;T&gt; = T extends any ? T[] : never;
+type Result = ToArray&lt;string | number&gt;; // string[] | number[] (distributes)
+// vs:
+type NoDistrib&lt;T&gt; = [T] extends [any] ? T[] : never;
+type Result2 = NoDistrib&lt;string | number&gt;; // (string | number)[]</code></pre>
+</div>
+</div>
+</details>
+
+<div class="key-takeaways">
+  <h3>⚡ Key Takeaways</h3>
+  <ul>
+    <li>Structural typing: two types are compatible if their shapes match, regardless of name — duck typing with static analysis</li>
+    <li>Generics + constraints (<code>extends</code>) make code reusable without sacrificing type safety</li>
+    <li>Conditional types (<code>T extends U ? X : Y</code>) and mapped types (<code>{ [K in keyof T]: ... }</code>) enable powerful type transformations</li>
+    <li><code>unknown</code> is safer than <code>any</code> — you must narrow it before use; <code>any</code> opts out of all type checking</li>
+    <li><code>as const</code> freezes types to literal values, enabling precise discriminated unions</li>
+    <li>Utility types (<code>Partial</code>, <code>Pick</code>, <code>Omit</code>, <code>ReturnType</code>) eliminate boilerplate type definitions</li>
+  </ul>
+</div>

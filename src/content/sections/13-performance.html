@@ -1,0 +1,154 @@
+<h2>13. Web Performance (Deep) <span class="topic-count">4 topics</span></h2>
+<p class="section-intro">Web performance is a first-class interview topic, especially for senior roles. Core Web Vitals (LCP, CLS, INP) and their measurement, the critical rendering path, bundle optimization, lazy loading, and service workers are all fair game. Always connect performance work to user impact and business outcomes.</p>
+
+<details>
+<summary>13.1 Core Web Vitals</summary>
+<div class="details-body">
+<table>
+  <tr><th>Metric</th><th>Measures</th><th>Good</th><th>Needs Work</th><th>Poor</th></tr>
+  <tr><td>LCP (Largest Contentful Paint)</td><td>Loading — when largest element renders</td><td>&lt; 2.5s</td><td>2.5s–4s</td><td>&gt; 4s</td></tr>
+  <tr><td>INP (Interaction to Next Paint)</td><td>Responsiveness — worst interaction latency</td><td>&lt; 200ms</td><td>200–500ms</td><td>&gt; 500ms</td></tr>
+  <tr><td>CLS (Cumulative Layout Shift)</td><td>Stability — unexpected visual shifts</td><td>&lt; 0.1</td><td>0.1–0.25</td><td>&gt; 0.25</td></tr>
+</table>
+
+<h4>Improving LCP</h4>
+<ul>
+  <li>Preload the hero image: <code>&lt;link rel="preload" as="image" href="hero.webp" fetchpriority="high"&gt;</code></li>
+  <li>Do NOT lazy-load above-the-fold images</li>
+  <li>Use CDN, eliminate render-blocking resources</li>
+  <li>Serve images in WebP/AVIF format (30-50% smaller)</li>
+  <li>Use <code>fetchpriority="high"</code> on LCP image element</li>
+</ul>
+
+<h4>Fixing CLS</h4>
+<ul>
+  <li>Always set <code>width</code> and <code>height</code> on images (browser reserves space)</li>
+  <li>Reserve space for ads/embeds with aspect-ratio or min-height</li>
+  <li>Avoid inserting content above existing content after load</li>
+  <li>Use <code>font-display: optional</code> to avoid layout shift from font swap</li>
+</ul>
+
+<h4>Fixing INP</h4>
+<ul>
+  <li>Break up long tasks (over 50ms) with <code>setTimeout</code> or <code>scheduler.yield()</code></li>
+  <li>Move non-UI work to Web Workers</li>
+  <li>Use <code>startTransition</code> in React for non-urgent updates</li>
+  <li>Avoid blocking the main thread during input events</li>
+</ul>
+</div>
+</details>
+
+<details>
+<summary>13.2 Critical Rendering Path &amp; Script Loading</summary>
+<div class="details-body">
+<pre><code>// Critical Rendering Path:
+// HTML parse -> DOM + CSSOM -> Render Tree -> Layout -> Paint -> Composite
+
+// CSS always render-blocking (blocks paint until parsed)
+// Inline critical CSS for above-the-fold content
+// &lt;link rel="stylesheet" media="print" onload="this.media='all'"&gt; for non-critical
+
+// Script loading comparison:
+// &lt;script src="app.js"&gt;          — blocks HTML parsing AND rendering
+// &lt;script defer src="app.js"&gt;    — downloads in parallel, executes after DOM, in order
+// &lt;script async src="app.js"&gt;    — downloads in parallel, executes immediately when done (no order guarantee)
+// &lt;script type="module"&gt;         — deferred by default + strict mode
+
+// Resource hints
+&lt;!-- DNS + TCP + TLS pre-setup --&gt;
+&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;
+&lt;!-- DNS only --&gt;
+&lt;link rel="dns-prefetch" href="https://analytics.example.com"&gt;
+&lt;!-- High-priority fetch (fonts, hero image) --&gt;
+&lt;link rel="preload" as="font" href="font.woff2" crossorigin&gt;
+&lt;link rel="preload" as="image" href="hero.webp"&gt;
+&lt;!-- Idle-time fetch for next navigation --&gt;
+&lt;link rel="prefetch" href="/next-page-bundle.js"&gt;</code></pre>
+</div>
+</details>
+
+<details>
+<summary>13.3 Bundle &amp; Image Optimization</summary>
+<div class="details-body">
+<pre><code>// Code splitting: dynamic imports create separate chunks
+const LargeChart = React.lazy(() => import("./LargeChart"));
+// Route-level splitting with React Router v6
+const routes = [
+  { path: "/", lazy: () => import("./pages/Home") },
+  { path: "/analytics", lazy: () => import("./pages/Analytics") }
+];
+
+// Tree shaking: dead code elimination
+// Requires ES modules + "sideEffects": false in package.json
+import { debounce } from "lodash-es";  // tree-shakeable
+
+// Responsive images
+&lt;img
+  src="image-800.webp"
+  srcset="image-400.webp 400w, image-800.webp 800w, image-1200.webp 1200w"
+  sizes="(max-width: 600px) 100vw, 800px"
+  loading="lazy"
+  decoding="async"
+  width="800"
+  height="450"
+/&gt;
+
+// HTTP Caching strategy
+// Versioned assets (content hash in filename): immutable, long cache
+// app.abc123.js  ->  Cache-Control: max-age=31536000, immutable
+// HTML files     ->  Cache-Control: no-cache (revalidate, short TTL)
+// API data       ->  depends on endpoint (no-store for sensitive, short max-age for data)</code></pre>
+</div>
+</details>
+
+<details>
+<summary>13.4 Service Workers &amp; Web Workers</summary>
+<div class="details-body">
+<pre><code>// Service Worker: intercept network requests, offline caching
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open("v1").then(cache => cache.addAll(["/", "/app.js", "/style.css"]))
+  );
+});
+
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      const network = fetch(event.request).then(response => {
+        caches.open("v1").then(c => c.put(event.request, response.clone()));
+        return response;
+      });
+      return cached || network;  // cache-first
+    })
+  );
+});
+
+// Web Worker: off-main-thread computation
+const worker = new Worker("worker.js", { type: "module" });
+worker.postMessage({ type: "SORT", data: hugeArray });
+worker.onmessage = ({ data }) => displaySortedResults(data);
+
+// worker.js
+self.onmessage = ({ data }) => {
+  if (data.type === "SORT") {
+    const sorted = data.data.sort((a, b) => a - b);
+    self.postMessage(sorted);
+  }
+};
+
+// SharedArrayBuffer: zero-copy memory sharing with workers
+// Requires: Cross-Origin-Opener-Policy + Cross-Origin-Embedder-Policy headers</code></pre>
+</div>
+</details>
+
+<div class="key-takeaways">
+  <h3>⚡ Key Takeaways</h3>
+  <ul>
+    <li>LCP measures loading (target &lt;2.5s), CLS measures visual stability (target &lt;0.1), INP measures responsiveness (target &lt;200ms)</li>
+    <li>Preload critical resources (<code>&lt;link rel="preload"&gt;</code>); defer non-critical JavaScript (<code>&lt;script defer&gt;</code>)</li>
+    <li>Code splitting and lazy loading reduce initial bundle size; <code>React.lazy</code> and dynamic <code>import()</code> are the standard tools</li>
+    <li>Images should use WebP/AVIF, responsive <code>srcset</code>, and explicit <code>width</code>/<code>height</code> attributes to prevent CLS</li>
+    <li>Service workers enable offline support and instant repeat visits via cache-first strategies</li>
+    <li>Web Workers offload CPU-intensive work (parsing, encryption) off the main thread to prevent jank</li>
+  </ul>
+</div>

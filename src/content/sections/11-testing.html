@@ -1,0 +1,189 @@
+<h2>11. Testing (Deep) <span class="topic-count">4 topics</span></h2>
+<p class="section-intro">Testing knowledge signals engineering maturity. Interviews cover the testing pyramid, unit vs integration vs E2E tradeoffs, mocking strategies, and the APIs of Jest, React Testing Library, and Cypress/Playwright. Knowing what <em>not</em> to test is as valued as knowing what to test.</p>
+
+<details>
+<summary>11.1 Test Types</summary>
+<div class="details-body">
+<table>
+  <tr><th>Type</th><th>Scope</th><th>Speed</th><th>Confidence</th><th>Maintenance</th></tr>
+  <tr><td>Unit</td><td>Single function/class</td><td>Very fast (ms)</td><td>Low (isolated)</td><td>Low</td></tr>
+  <tr><td>Integration</td><td>Multiple modules + DB/API</td><td>Seconds</td><td>Medium-High</td><td>Medium</td></tr>
+  <tr><td>E2E</td><td>Full user journey</td><td>Minutes</td><td>High</td><td>High</td></tr>
+  <tr><td>Contract</td><td>API contracts between services</td><td>Fast</td><td>Medium</td><td>Medium</td></tr>
+</table>
+<p><strong>Testing Pyramid:</strong> many unit, fewer integration, few E2E.<br>
+<strong>Testing Trophy</strong> (Kent C. Dodds): emphasize integration tests for best ROI.</p>
+</div>
+</details>
+
+<details>
+<summary>11.2 Jest</summary>
+<div class="details-body">
+<pre><code>import { add } from "./math";
+
+describe("add()", () => {
+  it("adds two numbers", () => {
+    expect(add(1, 2)).toBe(3);
+  });
+
+  it.each([
+    [1, 2, 3],
+    [-1, 1, 0],
+    [0, 0, 0]
+  ])("add(%i, %i) = %i", (a, b, expected) => {
+    expect(add(a, b)).toBe(expected);
+  });
+});
+
+// Lifecycle hooks
+beforeAll(() => setupDB());
+afterAll(() => teardownDB());
+beforeEach(() => clearCache());
+afterEach(() => jest.clearAllMocks());
+
+// Matchers
+expect(42).toBe(42);
+expect({ a: 1 }).toEqual({ a: 1 });         // deep equality
+expect([1,2,3]).toContain(2);
+expect("hello world").toMatch(/world/);
+expect(fn).toThrow("error message");
+expect(fn).toThrow(TypeError);
+expect(null).toBeNull();
+expect(arr).toHaveLength(3);
+expect(obj).toHaveProperty("nested.path", "value");
+
+// Mocking
+const mockFn = jest.fn().mockReturnValue(42);
+const asyncMock = jest.fn().mockResolvedValue({ id: 1 });
+const rejectMock = jest.fn().mockRejectedValue(new Error("fail"));
+mockFn.mockImplementation((x) => x * 2);
+
+expect(mockFn).toHaveBeenCalledTimes(1);
+expect(mockFn).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+expect(mockFn).toHaveBeenLastCalledWith("arg1");
+
+// Spy on existing method
+const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+jest.spyOn(Date, "now").mockReturnValue(1234567890000);
+
+// Mock entire module
+jest.mock("../db", () => ({
+  query: jest.fn().mockResolvedValue([{ id: 1, name: "Alice" }])
+}));
+
+// Async tests
+it("fetches data", async () => {
+  const data = await fetchData(1);
+  expect(data.name).toBe("Alice");
+});
+
+// Coverage types:
+// Statement: each executable statement run?
+// Branch: each if/else branch taken?
+// Function: each function called?
+// Line: each line executed?
+// jest --coverage --coverageThreshold='{"global":{"branches":80}}'</code></pre>
+</div>
+</details>
+
+<details>
+<summary>11.3 React Testing Library</summary>
+<div class="details-body">
+<pre><code>import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+test("calls onClick when button clicked", async () => {
+  const user = userEvent.setup();
+  const handleClick = jest.fn();
+
+  render(&lt;Button onClick={handleClick}&gt;Submit&lt;/Button&gt;);
+
+  await user.click(screen.getByRole("button", { name: /submit/i }));
+  expect(handleClick).toHaveBeenCalledTimes(1);
+});
+
+// Query priority (most to least preferred):
+// 1. getByRole            - matches accessible role + name
+// 2. getByLabelText       - form inputs with labels
+// 3. getByPlaceholderText - input placeholders
+// 4. getByText            - text content
+// 5. getByDisplayValue    - form values
+// 6. getByAltText         - image alt text
+// 7. getByTitle           - title attribute
+// 8. getByTestId          - data-testid (last resort)
+
+// Query variants:
+// getBy    - throws if 0 or more than 1 found
+// queryBy  - returns null if not found (assert absence)
+// findBy   - async, returns promise, waits for element
+// getAllBy, queryAllBy, findAllBy - return arrays
+
+// Testing async
+test("loads and displays data", async () => {
+  render(&lt;UserProfile id={1} /&gt;);
+  expect(screen.getByText(/loading/i)).toBeInTheDocument();
+  await waitFor(() =>
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument()
+  );
+  expect(screen.getByText("Alice")).toBeInTheDocument();
+});
+
+// User interactions
+await user.type(input, "hello world");
+await user.clear(input);
+await user.selectOptions(select, ["option1"]);
+await user.keyboard("{Enter}");
+await user.tab();</code></pre>
+</div>
+</details>
+
+<details>
+<summary>11.4 Cypress / Playwright</summary>
+<div class="details-body">
+<pre><code>// Playwright E2E test
+import { test, expect } from "@playwright/test";
+
+test("user can log in", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("user@test.com");
+  await page.getByLabel("Password").fill("password123");
+  await page.getByRole("button", { name: /log in/i }).click();
+  await expect(page).toHaveURL("/dashboard");
+  await expect(page.getByText("Welcome back")).toBeVisible();
+});
+
+test("shows error on API failure", async ({ page }) => {
+  await page.route("**/api/users", route =>
+    route.fulfill({ status: 500, body: "Server Error" })
+  );
+  await page.goto("/users");
+  await expect(page.getByText(/failed to load/i)).toBeVisible();
+});
+
+// Selector best practices (most stable to least):
+// 1. data-testid: data-testid="submit-btn"
+// 2. ARIA role: page.getByRole("button", { name: /submit/i })
+// 3. Labels: page.getByLabel("Email")
+// 4. Text: page.getByText("Submit")
+// Avoid: CSS classes (.btn-primary — unstable, style-coupled)
+
+// Cypress equivalent
+cy.visit("/login");
+cy.findByLabelText("Email").type("user@test.com");
+cy.findByRole("button", { name: /login/i }).click();
+cy.url().should("include", "/dashboard");
+cy.intercept("GET", "/api/users", { statusCode: 500 }).as("usersError");</code></pre>
+</div>
+</details>
+
+<div class="key-takeaways">
+  <h3>⚡ Key Takeaways</h3>
+  <ul>
+    <li>Test the behavior users see, not implementation details; prefer <code>getByRole</code> over <code>getByTestId</code></li>
+    <li>Mock at system boundaries (HTTP calls, file system, timers), not internal functions</li>
+    <li><code>beforeEach</code> setup and <code>afterEach</code> cleanup prevent test pollution; tests should be independent and order-agnostic</li>
+    <li>Snapshot tests catch regressions but become noise when updated blindly — use them sparingly</li>
+    <li>E2E tests are the slowest and most brittle layer — focus them on critical user flows, not exhaustive coverage</li>
+    <li>Coverage percentage is a proxy metric; 100% coverage does not mean 100% correct behavior</li>
+  </ul>
+</div>

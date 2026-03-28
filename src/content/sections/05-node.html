@@ -1,0 +1,357 @@
+<h2>5. Node.js (Deep) <span class="topic-count">7 topics</span></h2>
+<p class="section-intro">Node.js interviews test your understanding of single-threaded non-blocking I/O. The event loop phases, stream backpressure, cluster vs worker threads, and production patterns like graceful shutdown are common targets. Knowing libuv internals at a conceptual level is a strong differentiator.</p>
+
+<details>
+<summary>5.1 Event Loop (Node-specific)</summary>
+<div class="details-body">
+<h4>Phases of the Node.js Event Loop</h4>
+<pre><code>// 1. timers:          setTimeout, setInterval callbacks
+// 2. pending:         I/O callbacks from previous iteration
+// 3. idle/prepare:    internal use
+// 4. poll:            retrieve new I/O events (blocking if queue empty)
+// 5. check:           setImmediate callbacks
+// 6. close callbacks: socket.on("close"), etc.
+
+// Between each phase: process.nextTick + Promise microtasks drain</code></pre>
+
+<h4>setImmediate vs setTimeout(fn, 0)</h4>
+<pre><code>// In the main module: order is non-deterministic (system/timing dependent)
+setTimeout(() => console.log("timeout"), 0);
+setImmediate(() => console.log("immediate"));
+// May output either order
+
+// Inside I/O callback: setImmediate ALWAYS runs first
+const fs = require("fs");
+fs.readFile("file.txt", () => {
+  setTimeout(() => console.log("timeout"), 0);
+  setImmediate(() => console.log("immediate")); // always first
+});
+
+// process.nextTick: runs BEFORE next event loop phase (before I/O)
+process.nextTick(() => console.log("nextTick"));
+Promise.resolve().then(() => console.log("promise"));
+setImmediate(() => console.log("setImmediate"));
+setTimeout(() => console.log("setTimeout"), 0);
+
+// Output: nextTick, promise, setTimeout/setImmediate (order varies), setImmediate
+
+// libuv thread pool (default 4 threads, UV_THREADPOOL_SIZE)
+// Used by: fs (most ops), crypto (pbkdf2, randomBytes), dns.lookup, zlib</code></pre>
+</div>
+</details>
+
+<details>
+<summary>5.2 Core Modules</summary>
+<div class="details-body">
+<h4>fs</h4>
+<pre><code>const fs = require("fs");
+const fsp = require("fs/promises");
+
+// Sync (blocks event loop — avoid in production servers)
+const data = fs.readFileSync("file.txt", "utf8");
+
+// Callback-based
+fs.readFile("file.txt", "utf8", (err, data) => {
+  if (err) throw err;
+  console.log(data);
+});
+
+// Promise-based (preferred)
+const data = await fsp.readFile("file.txt", "utf8");
+await fsp.writeFile("out.txt", content, "utf8");
+await fsp.appendFile("log.txt", line + "\n");
+const files = await fsp.readdir("./src");
+const stat = await fsp.stat("file.txt");
+await fsp.mkdir("./dist", { recursive: true });
+
+// Streaming (for large files)
+const readable = fs.createReadStream("large.csv");
+const writable = fs.createWriteStream("out.csv");
+readable.pipe(writable);</code></pre>
+
+<h4>path</h4>
+<pre><code>const path = require("path");
+path.join("src", "utils", "index.js");  // "src/utils/index.js" (OS separator)
+path.resolve("./src", "utils");         // absolute path
+path.dirname("/foo/bar/file.js");       // "/foo/bar"
+path.basename("/foo/bar/file.js");      // "file.js"
+path.basename("/foo/bar/file.js", ".js"); // "file"
+path.extname("file.js");               // ".js"
+path.parse("/foo/bar/file.js");
+// { root: "/", dir: "/foo/bar", base: "file.js", ext: ".js", name: "file" }
+__dirname; // directory of current file (CJS only)
+__filename; // current file path (CJS only)</code></pre>
+
+<h4>crypto</h4>
+<pre><code>const crypto = require("crypto");
+
+// Hashing
+crypto.createHash("sha256").update("data").digest("hex");
+
+// HMAC
+crypto.createHmac("sha256", secret).update("data").digest("hex");
+
+// Random bytes
+const token = crypto.randomBytes(32).toString("hex");
+
+// Password hashing (use bcrypt or argon2, not crypto directly)
+// bcrypt: adaptive, slow by design
+import bcrypt from "bcrypt";
+const hash = await bcrypt.hash(password, 12); // saltRounds=12
+const match = await bcrypt.compare(password, hash);</code></pre>
+
+<h4>child_process</h4>
+<table>
+  <tr><th>Method</th><th>Use case</th><th>Buffers output</th><th>Streams</th></tr>
+  <tr><td><code>exec</code></td><td>Shell commands, small output</td><td>yes</td><td>no</td></tr>
+  <tr><td><code>spawn</code></td><td>Long-running processes, large output</td><td>no</td><td>yes</td></tr>
+  <tr><td><code>execFile</code></td><td>Execute binary (no shell)</td><td>yes</td><td>no</td></tr>
+  <tr><td><code>fork</code></td><td>Node.js child process with IPC</td><td>no</td><td>IPC channel</td></tr>
+</table>
+<pre><code>const { exec, spawn } = require("child_process");
+
+exec("ls -la", (err, stdout, stderr) => console.log(stdout));
+
+const ls = spawn("ls", ["-la"]);
+ls.stdout.on("data", data => console.log(data.toString()));
+ls.on("close", code => console.log(`exited: ${code}`));</code></pre>
+
+<h4>EventEmitter</h4>
+<pre><code>const { EventEmitter } = require("events");
+
+class MyEmitter extends EventEmitter {}
+const emitter = new MyEmitter();
+
+emitter.on("data", (chunk) => process(chunk));
+emitter.once("connect", () => console.log("connected once"));
+emitter.emit("data", Buffer.from("hello"));
+emitter.removeListener("data", handler);
+emitter.removeAllListeners("data");
+
+// Memory leak warning: default maxListeners = 10
+emitter.setMaxListeners(20);</code></pre>
+</div>
+</details>
+
+<details>
+<summary>5.3 Streams</summary>
+<div class="details-body">
+<pre><code>const { Readable, Writable, Transform, pipeline } = require("stream");
+
+// Why streams: process data in chunks instead of loading entirely into memory
+// 1GB file: buffering needs 1GB RAM; streaming needs ~64KB
+
+// Readable stream
+const { createReadStream } = require("fs");
+const readable = createReadStream("big.file");
+readable.on("data", chunk => process(chunk));
+readable.on("end", () => console.log("done"));
+readable.on("error", err => console.error(err));
+
+// Backpressure: writable signals it's full → readable pauses
+// pipe handles backpressure automatically
+readable.pipe(writable);
+
+// Transform stream
+const { createGzip } = require("zlib");
+const gzip = createGzip();
+readable.pipe(gzip).pipe(writable); // compress on the fly
+
+// pipeline: better than pipe (handles errors + cleanup)
+const { promisify } = require("util");
+const pipelineAsync = promisify(pipeline);
+await pipelineAsync(createReadStream("input"), createGzip(), createWriteStream("output.gz"));
+
+// Custom transform
+const upperCase = new Transform({
+  transform(chunk, encoding, callback) {
+    callback(null, chunk.toString().toUpperCase());
+  }
+});</code></pre>
+</div>
+</details>
+
+<details>
+<summary>5.4 Express.js (Deep)</summary>
+<div class="details-body">
+<pre><code>const express = require("express");
+const app = express();
+
+// Middleware: (req, res, next) => void
+// Runs in order of registration
+app.use(express.json());          // parse JSON body
+app.use(express.urlencoded({ extended: true })); // parse form data
+
+// Custom middleware
+const logger = (req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next(); // MUST call next() or send response
+};
+app.use(logger);
+
+// Router organization
+const userRouter = express.Router();
+userRouter.get("/", listUsers);
+userRouter.get("/:id", getUser);
+userRouter.post("/", createUser);
+userRouter.put("/:id", updateUser);
+userRouter.delete("/:id", deleteUser);
+app.use("/api/users", userRouter);
+
+// Error-handling middleware: MUST have 4 args
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.statusCode || 500).json({
+    error: err.message || "Internal Server Error"
+  });
+});
+
+// Async wrapper to catch errors
+const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+app.get("/users/:id", asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ error: "Not found" });
+  res.json(user);
+}));
+
+// Security middleware
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+app.use(helmet());
+app.use(cors({ origin: ["https://myapp.com"], credentials: true }));
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));</code></pre>
+</div>
+</details>
+
+<details>
+<summary>5.5 Authentication &amp; Authorization</summary>
+<div class="details-body">
+<h4>Sessions vs JWT</h4>
+<table>
+  <tr><th>Feature</th><th>Sessions</th><th>JWT</th></tr>
+  <tr><td>Storage</td><td>Server (DB/Redis)</td><td>Client (cookie/localStorage)</td></tr>
+  <tr><td>Revocation</td><td>Easy (delete session)</td><td>Hard (need blacklist or short TTL)</td></tr>
+  <tr><td>Scalability</td><td>Needs shared session store</td><td>Stateless — easy to scale</td></tr>
+  <tr><td>Size</td><td>Small cookie</td><td>Larger token</td></tr>
+  <tr><td>Best for</td><td>Web apps, need instant revoke</td><td>APIs, microservices, mobile</td></tr>
+</table>
+
+<h4>JWT Implementation</h4>
+<pre><code>import jwt from "jsonwebtoken";
+
+// Sign (create)
+const token = jwt.sign(
+  { userId: user.id, role: user.role },  // payload
+  process.env.JWT_SECRET,                 // secret
+  { expiresIn: "15m", algorithm: "HS256" }
+);
+
+// Verify
+try {
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  req.user = decoded;
+  next();
+} catch (err) {
+  if (err.name === "TokenExpiredError") return res.status(401).json({ error: "Token expired" });
+  return res.status(401).json({ error: "Invalid token" });
+}
+
+// Refresh token pattern
+// Access token: short-lived (15min), stored in memory
+// Refresh token: long-lived (7d), stored in HttpOnly cookie
+// Rotation: each refresh issues new refresh token + invalidates old
+
+// JWT vulnerabilities:
+// 1. alg: "none" attack → always verify algorithm explicitly
+// 2. Weak secrets → use 256-bit random secret
+// 3. Sensitive data in payload → payload is base64, NOT encrypted
+// 4. Long expiry → use short access tokens + refresh tokens</code></pre>
+</div>
+</details>
+
+<details>
+<summary>5.6 Error Handling Patterns</summary>
+<div class="details-body">
+<pre><code>// Operational errors: expected (invalid input, DB down) — handle gracefully
+// Programmer errors: bugs (TypeError, undefined.property) — let it crash
+
+// Custom error class
+class AppError extends Error {
+  constructor(message, statusCode = 500, code = "INTERNAL_ERROR") {
+    super(message);
+    this.statusCode = statusCode;
+    this.code = code;
+    this.isOperational = true;
+  }
+}
+
+// Async wrapper
+const asyncHandler = fn => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
+
+// Unhandled rejections (Node.js)
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  // Graceful shutdown
+  server.close(() => process.exit(1));
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  process.exit(1); // Required — state is undefined
+});</code></pre>
+</div>
+</details>
+
+<details>
+<summary>5.7 Performance &amp; Production</summary>
+<div class="details-body">
+<pre><code>// PM2: process manager
+// pm2 start app.js -i max    -- cluster mode (one process per CPU)
+// pm2 reload app             -- zero-downtime reload
+// pm2 monit                  -- monitoring dashboard
+
+// Cluster module
+const cluster = require("cluster");
+const os = require("os");
+
+if (cluster.isPrimary) {
+  os.cpus().forEach(() => cluster.fork());
+  cluster.on("exit", (worker) => {
+    console.log(`Worker ${worker.id} died, forking new`);
+    cluster.fork();
+  });
+} else {
+  require("./app"); // each worker runs app
+}
+
+// Connection pooling with pg
+import { Pool } from "pg";
+const pool = new Pool({ max: 20, idleTimeoutMillis: 30000 });
+const client = await pool.connect();
+try {
+  const result = await client.query("SELECT * FROM users WHERE id = $1", [id]);
+} finally {
+  client.release(); // Always release!
+}
+
+// NODE_ENV production effects:
+// - Express: disables dev error messages
+// - React: no dev warnings, smaller bundle
+// - Many libraries optimize behavior</code></pre>
+</div>
+</details>
+
+<div class="key-takeaways">
+  <h3>⚡ Key Takeaways</h3>
+  <ul>
+    <li>Node's event loop has 6 phases; <code>setImmediate</code> fires in the check phase, <code>process.nextTick</code> fires between any two phases</li>
+    <li>Streams solve the memory problem of loading entire files/responses into RAM — always prefer streams for large data</li>
+    <li>Never block the event loop with synchronous CPU work; offload to worker threads or child processes</li>
+    <li><code>cluster</code> spawns multiple processes sharing the same port; each has its own V8 instance and memory space</li>
+    <li>Unhandled promise rejections must be caught globally with <code>process.on('unhandledRejection')</code></li>
+    <li>Express middleware order matters; error-handling middleware must have exactly 4 parameters: <code>(err, req, res, next)</code></li>
+    <li>Always use connection pooling for database clients — never create a new connection per request</li>
+  </ul>
+</div>

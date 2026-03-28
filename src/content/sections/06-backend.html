@@ -1,0 +1,282 @@
+<h2>6. Backend Core Principles <span class="topic-count">6 topics</span></h2>
+<p class="section-intro">Backend principles cut across every server-side stack. HTTP semantics, REST and GraphQL design, authentication flows (JWT, sessions, OAuth), caching strategies, and the monolith-vs-microservices tradeoff are standard interview topics for any backend or fullstack role.</p>
+
+<details>
+<summary>6.1 HTTP Protocol</summary>
+<div class="details-body">
+<h4>HTTP Versions Comparison</h4>
+<table>
+  <tr><th>Feature</th><th>HTTP/1.1</th><th>HTTP/2</th><th>HTTP/3 (QUIC)</th></tr>
+  <tr><td>Multiplexing</td><td>No (pipelining, HOL blocking)</td><td>Yes (streams)</td><td>Yes</td></tr>
+  <tr><td>Header compression</td><td>No</td><td>HPACK</td><td>QPACK</td></tr>
+  <tr><td>Transport</td><td>TCP</td><td>TCP</td><td>UDP (QUIC)</td></tr>
+  <tr><td>HOL blocking</td><td>Request-level</td><td>Stream-level (TCP HOL remains)</td><td>No</td></tr>
+  <tr><td>Server push</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+  <tr><td>Connection setup</td><td>1 RTT</td><td>1 RTT + TLS</td><td>0-1 RTT (0-RTT resumption)</td></tr>
+</table>
+
+<h4>HTTP Methods</h4>
+<table>
+  <tr><th>Method</th><th>Purpose</th><th>Idempotent</th><th>Safe</th><th>Body</th></tr>
+  <tr><td>GET</td><td>Retrieve resource</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+  <tr><td>POST</td><td>Create resource / submit data</td><td>No</td><td>No</td><td>Yes</td></tr>
+  <tr><td>PUT</td><td>Replace entire resource</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+  <tr><td>PATCH</td><td>Partial update</td><td>No (but can be)</td><td>No</td><td>Yes</td></tr>
+  <tr><td>DELETE</td><td>Delete resource</td><td>Yes</td><td>No</td><td>Optional</td></tr>
+  <tr><td>HEAD</td><td>GET without body (check existence)</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+  <tr><td>OPTIONS</td><td>CORS preflight, capability check</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+</table>
+
+<h4>Status Codes</h4>
+<table>
+  <tr><th>Code</th><th>Meaning</th><th>Notes</th></tr>
+  <tr><td>200</td><td>OK</td><td>Successful GET/PUT/PATCH</td></tr>
+  <tr><td>201</td><td>Created</td><td>Successful POST, include Location header</td></tr>
+  <tr><td>204</td><td>No Content</td><td>Successful DELETE, no body</td></tr>
+  <tr><td>301</td><td>Moved Permanently</td><td>Redirect, cacheable</td></tr>
+  <tr><td>302</td><td>Found (temp redirect)</td><td>May change method to GET</td></tr>
+  <tr><td>304</td><td>Not Modified</td><td>ETag/If-None-Match hit</td></tr>
+  <tr><td>400</td><td>Bad Request</td><td>Invalid input, validation error</td></tr>
+  <tr><td>401</td><td>Unauthorized</td><td>Not authenticated</td></tr>
+  <tr><td>403</td><td>Forbidden</td><td>Authenticated but not authorized</td></tr>
+  <tr><td>404</td><td>Not Found</td><td>Resource doesn't exist</td></tr>
+  <tr><td>409</td><td>Conflict</td><td>Duplicate, version conflict</td></tr>
+  <tr><td>422</td><td>Unprocessable Entity</td><td>Validation failed (semantically invalid)</td></tr>
+  <tr><td>429</td><td>Too Many Requests</td><td>Rate limit hit</td></tr>
+  <tr><td>500</td><td>Internal Server Error</td><td>Unexpected server error</td></tr>
+  <tr><td>502</td><td>Bad Gateway</td><td>Upstream server error</td></tr>
+  <tr><td>503</td><td>Service Unavailable</td><td>Overloaded or maintenance</td></tr>
+</table>
+
+<h4>Cookies</h4>
+<pre><code>Set-Cookie: session=abc123;
+  HttpOnly;         /* Cannot be accessed via JS (XSS mitigation) */
+  Secure;           /* HTTPS only */
+  SameSite=Strict;  /* Never sent cross-site (CSRF mitigation) */
+                    /* Lax: sent on top-level navigation GET */
+                    /* None: always sent (requires Secure) */
+  Domain=.myapp.com;/* Include subdomains */
+  Path=/;
+  Max-Age=3600;     /* Seconds until expiry (preferred over Expires) */</code></pre>
+
+<h4>TLS Handshake (TLS 1.3)</h4>
+<p>1. Client Hello (supported ciphers, random) &rarr; 2. Server Hello (chosen cipher, certificate, random) &rarr; 3. Client verifies cert &rarr; 4. Key exchange (ECDHE) &rarr; 5. Both derive session keys &rarr; Encrypted communication. TLS 1.3: 1 RTT (0-RTT for resumption).</p>
+</div>
+</details>
+
+<details>
+<summary>6.2 API Design</summary>
+<div class="details-body">
+<h4>REST Principles</h4>
+<ul>
+  <li><strong>Uniform Interface</strong>: consistent resource-based URLs</li>
+  <li><strong>Stateless</strong>: no server-side client state</li>
+  <li><strong>Cacheable</strong>: responses can be cached</li>
+  <li><strong>Client-Server</strong>: separation of concerns</li>
+  <li><strong>Layered System</strong>: intermediaries (LB, cache, gateway)</li>
+</ul>
+<pre><code>// Resource naming
+GET    /api/v1/users           // list
+GET    /api/v1/users/:id       // get one
+POST   /api/v1/users           // create
+PUT    /api/v1/users/:id       // replace
+PATCH  /api/v1/users/:id       // partial update
+DELETE /api/v1/users/:id       // delete
+GET    /api/v1/users/:id/posts // nested resource
+
+// Versioning strategies:
+// 1. URL: /api/v1/... (most common, easy to test)
+// 2. Header: Accept: application/vnd.api.v1+json
+// 3. Query: /api?version=1
+
+// Cursor-based pagination
+// GET /api/posts?limit=20&after=cursor_xyz
+// Response: { data: [...], pagination: { nextCursor: "abc", hasMore: true } }</code></pre>
+
+<h4>GraphQL</h4>
+<pre><code>// Schema definition
+type User {
+  id: ID!
+  name: String!
+  posts: [Post!]!
+}
+type Query  { user(id: ID!): User }
+type Mutation { createUser(input: CreateUserInput!): User! }
+
+// N+1 Problem: fetching list + N separate queries for relations
+// Solution: DataLoader (batching + caching per request)
+const userLoader = new DataLoader(async (ids) => {
+  const users = await User.findAll({ where: { id: ids } });
+  return ids.map(id => users.find(u => u.id === id));
+});</code></pre>
+
+<h4>Pagination Comparison</h4>
+<table>
+  <tr><th>Type</th><th>How</th><th>Pros</th><th>Cons</th></tr>
+  <tr><td>Offset</td><td>OFFSET 20 LIMIT 10</td><td>Simple, random access</td><td>Inconsistent with inserts/deletes, slow at high offset</td></tr>
+  <tr><td>Cursor</td><td>WHERE id &gt; cursor LIMIT 10</td><td>Consistent, fast</td><td>No random page jump</td></tr>
+  <tr><td>Keyset</td><td>WHERE (col, id) &gt; (val, id)</td><td>Multi-column sort</td><td>Complex</td></tr>
+</table>
+</div>
+</details>
+
+<details>
+<summary>6.3 Authentication &amp; Security</summary>
+<div class="details-body">
+<h4>OWASP Top 10 (2021)</h4>
+<table>
+  <tr><th>#</th><th>Vulnerability</th><th>Mitigation</th></tr>
+  <tr><td>A01</td><td>Broken Access Control</td><td>Deny by default, test authorization, log failures</td></tr>
+  <tr><td>A02</td><td>Cryptographic Failures</td><td>TLS, don't store sensitive data, strong hashing</td></tr>
+  <tr><td>A03</td><td>Injection (SQL, NoSQL, command)</td><td>Parameterized queries, input validation, ORM</td></tr>
+  <tr><td>A04</td><td>Insecure Design</td><td>Threat modeling, secure design patterns</td></tr>
+  <tr><td>A05</td><td>Security Misconfiguration</td><td>Hardened defaults, disable unnecessary features</td></tr>
+  <tr><td>A06</td><td>Vulnerable Components</td><td>npm audit, Dependabot, pin versions</td></tr>
+  <tr><td>A07</td><td>Auth &amp; Identification Failures</td><td>MFA, strong passwords, session management</td></tr>
+  <tr><td>A08</td><td>Software &amp; Data Integrity Failures</td><td>Verify checksums, signed packages, CI/CD security</td></tr>
+  <tr><td>A09</td><td>Security Logging Failures</td><td>Log auth events, failures, alerts</td></tr>
+  <tr><td>A10</td><td>SSRF</td><td>Allowlist URLs, block internal IPs, disable redirects</td></tr>
+</table>
+
+<h4>SQL Injection</h4>
+<pre><code>// BAD: string interpolation
+const query = `SELECT * FROM users WHERE email = '${email}'`;
+// email = "' OR '1'='1" returns all users!
+
+// GOOD: parameterized queries
+const result = await pool.query(
+  "SELECT * FROM users WHERE email = $1", [email]
+);</code></pre>
+
+<h4>XSS Types and CSP</h4>
+<pre><code>// Stored XSS: script saved in DB, served to users
+// Reflected XSS: script in URL parameter, reflected back
+// DOM-based XSS: client-side JS manipulates DOM unsafely
+
+// Content Security Policy header
+// Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.com;
+
+// Sanitize user HTML
+import DOMPurify from "dompurify";
+element.innerHTML = DOMPurify.sanitize(userInput);</code></pre>
+
+<h4>CORS</h4>
+<pre><code>// Preflight (OPTIONS) triggered for: non-simple methods, custom headers
+// Server response headers:
+// Access-Control-Allow-Origin: https://myapp.com
+// Access-Control-Allow-Methods: GET, POST, PUT, DELETE
+// Access-Control-Allow-Headers: Content-Type, Authorization
+// Access-Control-Allow-Credentials: true
+// Access-Control-Max-Age: 86400  (cache preflight 24h)
+
+// Rate limiting algorithms:
+// Token bucket: fills at fixed rate, allows bursts up to bucket size
+// Leaky bucket: process at fixed rate, smooth output no bursts</code></pre>
+</div>
+</details>
+
+<details>
+<summary>6.4 Caching</summary>
+<div class="details-body">
+<pre><code>// Cache-Control response headers
+// Cache-Control: no-store              — Never cache (sensitive data)
+// Cache-Control: no-cache              — Revalidate before serving cached
+// Cache-Control: private, max-age=300  — Browser only, 5 min
+// Cache-Control: public, max-age=86400 — CDN + browser, 1 day
+// Cache-Control: public, immutable, max-age=31536000 — versioned assets
+
+// ETags: server sends hash of content
+// Client sends: If-None-Match: "etag-value"
+// Server: 304 Not Modified if unchanged
+
+// Redis cache-aside pattern
+async function getUser(id) {
+  const cached = await redis.get(`user:${id}`);
+  if (cached) return JSON.parse(cached);
+  const user = await db.query("SELECT * FROM users WHERE id = $1", [id]);
+  await redis.setex(`user:${id}`, 3600, JSON.stringify(user));
+  return user;
+}
+
+// Cache invalidation
+await redis.del(`user:${id}`);  // on user update
+
+// Write-through: write to cache AND DB simultaneously
+// Write-back: write to cache, async flush to DB (risk of data loss)</code></pre>
+</div>
+</details>
+
+<details>
+<summary>6.5 Messaging &amp; Async</summary>
+<div class="details-body">
+<h4>RabbitMQ</h4>
+<pre><code>// Exchange types:
+// direct: exact routing key match
+// topic:  wildcard routing key (user.* or *.created)
+// fanout: broadcast to all bound queues
+// headers: match on message headers
+
+channel.publish("user-events", "user.created", Buffer.from(JSON.stringify(user)));
+
+channel.consume("user-notifications", async (msg) => {
+  try {
+    await processMessage(JSON.parse(msg.content.toString()));
+    channel.ack(msg);
+  } catch {
+    channel.nack(msg, false, true); // requeue
+  }
+});</code></pre>
+
+<h4>Kafka vs RabbitMQ</h4>
+<table>
+  <tr><th>Feature</th><th>Kafka</th><th>RabbitMQ</th></tr>
+  <tr><td>Model</td><td>Log/pull (consumer reads)</td><td>Queue/push (broker delivers)</td></tr>
+  <tr><td>Retention</td><td>Configurable (days/weeks)</td><td>Until consumed</td></tr>
+  <tr><td>Replay</td><td>Yes (seek to offset)</td><td>No</td></tr>
+  <tr><td>Throughput</td><td>Millions/sec</td><td>Thousands/sec</td></tr>
+  <tr><td>Use case</td><td>Event streaming, audit log</td><td>Task queues, RPC</td></tr>
+</table>
+</div>
+</details>
+
+<details>
+<summary>6.6 Microservices vs Monolith</summary>
+<div class="details-body">
+<table>
+  <tr><th>Aspect</th><th>Monolith</th><th>Microservices</th></tr>
+  <tr><td>Deployment</td><td>Single unit</td><td>Independent services</td></tr>
+  <tr><td>Scale</td><td>Scale entire app</td><td>Scale individual services</td></tr>
+  <tr><td>Development</td><td>Simple, single codebase</td><td>Complex, polyglot possible</td></tr>
+  <tr><td>Failure isolation</td><td>Single point of failure</td><td>Isolated failures</td></tr>
+  <tr><td>Data management</td><td>Shared DB</td><td>DB per service</td></tr>
+  <tr><td>Best for</td><td>Startups, simple domains</td><td>Large teams, complex domains</td></tr>
+</table>
+
+<pre><code>// Saga Pattern: distributed transactions across services
+// Choreography: services emit events, others react
+// Orchestration: central coordinator directs each service
+
+// Outbox Pattern: guarantee message delivery
+// 1. Write to DB + outbox table in same transaction
+// 2. Background worker reads outbox and publishes to queue
+// 3. Delete from outbox on success
+
+// Strangler Fig: gradually replace monolith
+// Put proxy in front, route features to new services, strangle old code
+
+// BFF (Backend for Frontend): separate API gateway per client type</code></pre>
+</div>
+</details>
+
+<div class="key-takeaways">
+  <h3>⚡ Key Takeaways</h3>
+  <ul>
+    <li>HTTP methods have semantic meaning: GET is idempotent and safe; POST is neither; PUT/DELETE are idempotent</li>
+    <li>REST resource naming uses nouns, not verbs; versioning belongs in the URL (<code>/v1/</code>) or <code>Accept</code> header</li>
+    <li>JWTs are signed, not encrypted — never put sensitive data in the payload; always verify the signature server-side</li>
+    <li><code>Cache-Control</code> headers control both browser and CDN caching; <code>no-store</code> prevents all caching</li>
+    <li>Message queues (Kafka, RabbitMQ) decouple producers from consumers and absorb traffic spikes</li>
+    <li>Microservices trade deployment independence for distributed systems complexity — choose based on team size and scale</li>
+    <li>Implement rate limiting at the gateway or load balancer level, not inside each service</li>
+  </ul>
+</div>

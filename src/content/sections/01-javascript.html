@@ -1,0 +1,1018 @@
+<h2>1. JavaScript (Deep) <span class="topic-count">11 topics</span></h2>
+<p class="section-intro">JavaScript is the most-tested language in frontend interviews. This section covers the subtle runtime behaviors — coercion, closures, the event loop, prototype chains, and async patterns — that interviewers use to distinguish strong candidates. Expect at least one deep JS question in any frontend or fullstack interview.</p>
+
+<details>
+<summary>1.1 Core Types &amp; Coercion</summary>
+<div class="details-body">
+<h3>Primitive Types</h3>
+<p>JavaScript has 8 types: <code>string</code>, <code>number</code>, <code>bigint</code>, <code>boolean</code>, <code>undefined</code>, <code>null</code>, <code>symbol</code>, and <code>object</code> (everything else). The first 7 are primitives — immutable and compared by value.</p>
+
+<h4>typeof quirks</h4>
+<pre><code>typeof "hello"        // "string"
+typeof 42             // "number"
+typeof 42n            // "bigint"
+typeof true           // "boolean"
+typeof undefined      // "undefined"
+typeof null           // "object"  ← historical bug, null is NOT an object
+typeof {}             // "object"
+typeof []             // "object"  ← arrays are objects
+typeof function(){}   // "function" ← special case
+typeof Symbol()       // "symbol"
+
+// To check for null specifically:
+value === null
+
+// To check for array:
+Array.isArray(value)  // true</code></pre>
+
+<h4>Truthy / Falsy Values</h4>
+<table>
+  <tr><th>Falsy</th><th>Truthy (examples)</th></tr>
+  <tr><td><code>false</code></td><td><code>true</code></td></tr>
+  <tr><td><code>0</code>, <code>-0</code>, <code>0n</code></td><td>any non-zero number</td></tr>
+  <tr><td><code>""</code> (empty string)</td><td><code>"false"</code>, <code>"0"</code></td></tr>
+  <tr><td><code>null</code></td><td><code>[]</code> (empty array!)</td></tr>
+  <tr><td><code>undefined</code></td><td><code>{}</code> (empty object!)</td></tr>
+  <tr><td><code>NaN</code></td><td>any function</td></tr>
+</table>
+
+<h4>Implicit vs Explicit Coercion</h4>
+<pre><code>// Explicit coercion
+Number("42")     // 42
+Number(true)     // 1
+Number(false)    // 0
+Number(null)     // 0
+Number(undefined)// NaN
+Number("")       // 0
+Number("   ")    // 0
+Number("42abc")  // NaN
+
+String(42)       // "42"
+Boolean(0)       // false
+
+// Implicit coercion via + operator
+"3" + 4          // "34"   (number → string)
+4 + "3"          // "43"
+4 - "3"          // 1      (string → number for subtraction)
+"5" * "2"        // 10
+
+// Abstract equality (==) algorithm
+null == undefined  // true  (special case)
+null == 0          // false
+null == false      // false
+0 == false         // true  (false → 0)
+"" == false        // true  (both → 0)
+"1" == 1           // true  (string → number)
+[] == false        // true  ([] → "" → 0, false → 0)
+[] == ![]          // true  (insane but real)</code></pre>
+
+<h4>NaN</h4>
+<pre><code>NaN === NaN           // false — NaN is not equal to itself!
+typeof NaN            // "number" — NaN is technically a number
+
+isNaN("hello")        // true  — converts to number first: isNaN(NaN)
+isNaN(undefined)      // true  — isNaN(NaN)
+Number.isNaN("hello") // false — does NOT coerce, strictly checks
+Number.isNaN(NaN)     // true  — correct way
+
+// Safe NaN check
+function isReallyNaN(x) { return x !== x; }</code></pre>
+
+<h4>-0 and Object.is()</h4>
+<pre><code>-0 === 0            // true  ← surprising
+-0 === -0           // true
+Object.is(-0, 0)    // false ← distinguishes -0
+Object.is(NaN, NaN) // true  ← distinguishes NaN
+
+// Object.is = SameValueZero used in Map/Set keys
+const s = new Set();
+s.add(NaN);
+s.has(NaN); // true — Set uses SameValueZero</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.2 Scope &amp; Closures</summary>
+<div class="details-body">
+<h3>Lexical vs Dynamic Scope</h3>
+<p>JavaScript uses <strong>lexical (static) scope</strong> — where a function is <em>defined</em> determines what variables it can access, not where it's called. Dynamic scope (as in Bash) would use the call site instead.</p>
+
+<h4>Hoisting</h4>
+<pre><code>// var: declaration hoisted, initialization is undefined
+console.log(x); // undefined (not ReferenceError)
+var x = 5;
+// Equivalent to: var x; console.log(x); x = 5;
+
+// let/const: declaration hoisted but NOT initialized → TDZ
+console.log(y); // ReferenceError: Cannot access 'y' before initialization
+let y = 5;
+// The Temporal Dead Zone (TDZ) is from block entry to the declaration
+
+// Function declarations: fully hoisted (both name and body)
+greet(); // "hello" — works!
+function greet() { console.log("hello"); }
+
+// Function expressions: only var is hoisted (as undefined)
+sayHi(); // TypeError: sayHi is not a function
+var sayHi = function() { console.log("hi"); };
+
+// Arrow functions: same as function expressions
+go(); // TypeError
+var go = () => {};</code></pre>
+
+<h4>Closures</h4>
+<p>A closure is a function that remembers the variables from its outer scope even after the outer function has returned.</p>
+<pre><code>// Classic closure: counter
+function makeCounter(start = 0) {
+  let count = start;
+  return {
+    increment() { return ++count; },
+    decrement() { return --count; },
+    value()     { return count; }
+  };
+}
+const c = makeCounter(10);
+c.increment(); // 11
+c.increment(); // 12
+c.value();     // 12
+
+// Memoization via closure
+function memoize(fn) {
+  const cache = new Map();
+  return function(...args) {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key);
+    const result = fn.apply(this, args);
+    cache.set(key, result);
+    return result;
+  };
+}
+
+// Partial application via closure
+function multiply(a, b) { return a * b; }
+const double = memoize(multiply.bind(null, 2));
+double(5); // 10
+
+// Module pattern
+const BankAccount = (function() {
+  let balance = 0; // private
+  return {
+    deposit(amt)  { balance += amt; },
+    withdraw(amt) { if (amt <= balance) balance -= amt; },
+    getBalance()  { return balance; }
+  };
+})();</code></pre>
+
+<h4>IIFE (Immediately Invoked Function Expression)</h4>
+<pre><code>(function() {
+  var private = "not polluting global scope";
+  console.log(private);
+})();
+
+// Arrow IIFE
+(() => {
+  const x = 42;
+})();</code></pre>
+
+<h4>let in Loops — Classic Interview Trap</h4>
+<pre><code>// var: all callbacks share the SAME variable
+for (var i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0);
+}
+// Output: 3 3 3  (i is 3 by the time callbacks run)
+
+// let: each iteration gets its OWN binding
+for (let i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0);
+}
+// Output: 0 1 2  ✓
+
+// var workaround with IIFE
+for (var i = 0; i < 3; i++) {
+  (function(j) {
+    setTimeout(() => console.log(j), 0);
+  })(i);
+}
+// Output: 0 1 2</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.3 this &amp; Context</summary>
+<div class="details-body">
+<h3>The 4 Rules of this (in order of precedence)</h3>
+
+<h4>1. new binding</h4>
+<pre><code>function Person(name) { this.name = name; }
+const p = new Person("Alice");
+// 1. new object created
+// 2. [[Prototype]] linked
+// 3. this bound to new object
+// 4. object returned (unless constructor returns object)</code></pre>
+
+<h4>2. Explicit binding (call/apply/bind)</h4>
+<pre><code>function greet() { return `Hello, ${this.name}`; }
+const obj = { name: "Bob" };
+
+greet.call(obj);           // "Hello, Bob"  — call(thisArg, arg1, arg2)
+greet.apply(obj);          // "Hello, Bob"  — apply(thisArg, [args])
+const boundGreet = greet.bind(obj);
+boundGreet();              // "Hello, Bob"  — returns new function
+
+// bind vs call vs apply
+Math.max.call(null, 1, 2, 3);    // 3
+Math.max.apply(null, [1, 2, 3]); // 3  — useful when args are in array
+
+// Partial application with bind
+function add(a, b) { return a + b; }
+const add5 = add.bind(null, 5);
+add5(3); // 8</code></pre>
+
+<h4>3. Implicit binding</h4>
+<pre><code>const obj = {
+  name: "Carol",
+  greet() { return `Hello, ${this.name}`; }
+};
+obj.greet(); // "Hello, Carol" — this = obj (call site has context object)
+
+// Losing implicit binding
+const fn = obj.greet;
+fn(); // "Hello, undefined" — this = global (or undefined in strict mode)
+
+// Fix: bind
+const fn2 = obj.greet.bind(obj);
+fn2(); // "Hello, Carol"
+
+// Losing this in callbacks
+setTimeout(obj.greet, 100);         // broken
+setTimeout(obj.greet.bind(obj), 100); // fixed
+setTimeout(() => obj.greet(), 100);   // also fixed</code></pre>
+
+<h4>4. Default binding</h4>
+<pre><code>function whoAmI() { return this; }
+whoAmI();          // window (sloppy mode) or undefined (strict mode)
+// "use strict" at top of file or function prevents default binding</code></pre>
+
+<h4>Arrow Functions: Lexical this</h4>
+<pre><code>class Timer {
+  constructor() {
+    this.seconds = 0;
+  }
+  start() {
+    // Arrow function: inherits this from start() method's this
+    setInterval(() => {
+      this.seconds++;
+      console.log(this.seconds);
+    }, 1000);
+  }
+}
+
+// vs. regular function (broken):
+class BrokenTimer {
+  start() {
+    setInterval(function() {
+      this.seconds++; // this is undefined in strict mode!
+    }, 1000);
+  }
+}
+
+// Arrow functions CANNOT be used as constructors
+const Foo = () => {};
+new Foo(); // TypeError: Foo is not a constructor
+
+// Arrow functions have no 'arguments' object
+const f = () => { console.log(arguments); }; // ReferenceError</code></pre>
+
+<h4>this in Classes</h4>
+<pre><code>class Animal {
+  constructor(name) {
+    this.name = name;
+  }
+  speak() {
+    return `${this.name} makes a noise.`;
+  }
+}
+class Dog extends Animal {
+  speak() {
+    return `${this.name} barks.`;
+  }
+}
+const d = new Dog("Rex");
+d.speak(); // "Rex barks."
+
+// Class methods lose this when passed as callbacks
+const { speak } = d;
+speak(); // TypeError or undefined name (strict mode)</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.4 Prototypes &amp; Inheritance</summary>
+<div class="details-body">
+<h3>The Prototype Chain</h3>
+<pre><code>// Every object has [[Prototype]] (exposed as __proto__, non-standard)
+const arr = [1, 2, 3];
+// arr → Array.prototype → Object.prototype → null
+
+// Functions have a .prototype property used for inheritance
+function Animal(name) { this.name = name; }
+Animal.prototype.speak = function() { return this.name; };
+
+const dog = new Animal("Rex");
+dog.speak();                        // "Rex" — found on Animal.prototype
+dog.hasOwnProperty("name");         // true
+dog.hasOwnProperty("speak");        // false — inherited
+Object.getPrototypeOf(dog) === Animal.prototype; // true
+dog instanceof Animal;              // true</code></pre>
+
+<h4>Object.create() vs new</h4>
+<pre><code>// Object.create(proto): creates object with given prototype
+const animal = {
+  speak() { return `${this.name} makes noise`; }
+};
+const dog = Object.create(animal);
+dog.name = "Rex";
+dog.speak(); // "Rex makes noise"
+
+// new calls constructor + sets prototype
+function Cat(name) { this.name = name; }
+const c = new Cat("Luna");
+// Equivalent (roughly) to:
+const c2 = Object.create(Cat.prototype);
+Cat.call(c2, "Luna");</code></pre>
+
+<h4>ES6 Classes (syntactic sugar)</h4>
+<pre><code>class Shape {
+  #area = 0; // private field (ES2022)
+
+  constructor(color) {
+    this.color = color;
+  }
+  describe() { return `A ${this.color} shape`; }
+  static create(color) { return new Shape(color); }
+}
+
+class Circle extends Shape {
+  constructor(color, radius) {
+    super(color);        // Must call super() before using this
+    this.radius = radius;
+  }
+  describe() {
+    return `${super.describe()} (circle, r=${this.radius})`;
+  }
+  get area() { return Math.PI * this.radius ** 2; }
+  set radius(r) { this._radius = r < 0 ? 0 : r; }
+  get radius()  { return this._radius; }
+}
+
+const c = new Circle("red", 5);
+c.describe();      // "A red shape (circle, r=5)"
+c instanceof Circle; // true
+c instanceof Shape;  // true</code></pre>
+
+<h4>Mixins Pattern</h4>
+<pre><code>// JS supports single inheritance only — mixins add capabilities
+const Serializable = (Base) => class extends Base {
+  serialize() { return JSON.stringify(this); }
+  static deserialize(json) { return Object.assign(new this(), JSON.parse(json)); }
+};
+
+const Validatable = (Base) => class extends Base {
+  validate() { return Object.keys(this).every(k => this[k] !== null); }
+};
+
+class User extends Serializable(Validatable(class {})) {
+  constructor(name, email) {
+    super();
+    this.name = name;
+    this.email = email;
+  }
+}
+const u = new User("Alice", "a@b.com");
+u.serialize();  // '{"name":"Alice","email":"a@b.com"}'
+u.validate();   // true</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.5 Event Loop</summary>
+<div class="details-body">
+<h3>Components</h3>
+<ul>
+  <li><strong>Call Stack</strong> — LIFO structure for function execution frames</li>
+  <li><strong>Heap</strong> — unstructured memory region for object allocation</li>
+  <li><strong>Task Queue (Macrotask)</strong> — setTimeout, setInterval, I/O, UI events</li>
+  <li><strong>Microtask Queue</strong> — Promise callbacks, queueMicrotask, MutationObserver</li>
+</ul>
+
+<h3>Execution Order</h3>
+<p>1. Run synchronous code to completion (empty call stack)<br>
+2. Drain <strong>entire</strong> microtask queue (including new microtasks added during draining)<br>
+3. Render (browser only, between tasks)<br>
+4. Pick ONE macrotask, run it<br>
+5. Drain microtask queue again → repeat</p>
+
+<h4>Classic output question</h4>
+<pre><code>console.log("1");
+
+setTimeout(() => console.log("2"), 0);
+
+Promise.resolve().then(() => console.log("3"));
+
+console.log("4");
+
+// Output: 1, 4, 3, 2
+// 1, 4 → synchronous
+// 3    → microtask (Promise) runs before macrotask
+// 2    → macrotask (setTimeout)</code></pre>
+
+<h4>More complex example</h4>
+<pre><code>Promise.resolve()
+  .then(() => {
+    console.log("A");
+    setTimeout(() => console.log("B"), 0);
+    return Promise.resolve();
+  })
+  .then(() => console.log("C"));
+
+setTimeout(() => console.log("D"), 0);
+
+// Output: A, C, D, B
+// A → first microtask
+// C → second microtask (chained .then from "return Promise.resolve()")
+// D → first macrotask (registered before B)
+// B → second macrotask</code></pre>
+
+<h4>requestAnimationFrame</h4>
+<pre><code>// rAF fires before paint, after current macrotask + microtasks
+// Runs at display refresh rate (~60fps = every 16.7ms)
+// Paused when tab is hidden → battery efficient
+
+requestAnimationFrame(() => {
+  // safe to read/write DOM here
+  element.style.transform = `translateX(${x}px)`;
+});</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.6 Async Patterns</summary>
+<div class="details-body">
+<h3>Callback Hell</h3>
+<pre><code>// The pyramid of doom
+getUser(id, function(err, user) {
+  if (err) return handleError(err);
+  getOrders(user.id, function(err, orders) {
+    if (err) return handleError(err);
+    getItems(orders[0].id, function(err, items) {
+      if (err) return handleError(err);
+      // ... even deeper
+    });
+  });
+});</code></pre>
+
+<h3>Promises</h3>
+<pre><code>// States: pending → fulfilled | rejected (settled, irreversible)
+const p = new Promise((resolve, reject) => {
+  setTimeout(() => resolve(42), 1000);
+});
+
+p.then(val => console.log(val))   // 42
+ .catch(err => console.error(err))
+ .finally(() => console.log("done"));
+
+// Chaining — each .then returns a new promise
+fetch("/api/user")
+  .then(res => res.json())         // returns new promise
+  .then(user => user.name)
+  .then(name => console.log(name))
+  .catch(err => console.error(err)); // catches any error above</code></pre>
+
+<h4>Promise combinators comparison</h4>
+<table>
+  <tr><th>Method</th><th>Resolves when</th><th>Rejects when</th><th>Result shape</th></tr>
+  <tr><td><code>Promise.all</code></td><td>ALL fulfill</td><td>ANY rejects</td><td>array of values</td></tr>
+  <tr><td><code>Promise.allSettled</code></td><td>ALL settle</td><td>never</td><td>array of {status, value/reason}</td></tr>
+  <tr><td><code>Promise.race</code></td><td>FIRST settles</td><td>FIRST rejects</td><td>single value/reason</td></tr>
+  <tr><td><code>Promise.any</code></td><td>FIRST fulfills</td><td>ALL reject</td><td>single value / AggregateError</td></tr>
+</table>
+
+<h3>async/await</h3>
+<pre><code>// async function always returns a Promise
+// await pauses execution of the async function (not the thread!)
+
+async function fetchUser(id) {
+  try {
+    const res = await fetch(`/api/users/${id}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("Failed:", err.message);
+    throw err; // re-throw for caller
+  }
+}
+
+// Sequential vs Parallel
+async function sequential() {
+  const a = await fetch("/a"); // wait for a
+  const b = await fetch("/b"); // then wait for b
+  // Total: time(a) + time(b)
+}
+
+async function parallel() {
+  const [a, b] = await Promise.all([fetch("/a"), fetch("/b")]);
+  // Total: max(time(a), time(b))
+}
+
+// async/await compiles to:
+function fetchUser(id) {
+  return fetch(`/api/users/${id}`)
+    .then(res => { if(!res.ok) throw new Error(); return res.json(); });
+}</code></pre>
+
+<h4>AbortController</h4>
+<pre><code>const controller = new AbortController();
+const { signal } = controller;
+
+fetch("/api/large-data", { signal })
+  .then(res => res.json())
+  .catch(err => {
+    if (err.name === "AbortError") console.log("Request aborted");
+    else throw err;
+  });
+
+// Cancel after 5 seconds
+setTimeout(() => controller.abort(), 5000);
+
+// React cleanup pattern
+useEffect(() => {
+  const controller = new AbortController();
+  fetch("/api/data", { signal: controller.signal })
+    .then(r => r.json())
+    .then(setData)
+    .catch(() => {});
+  return () => controller.abort();
+}, []);</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.7 ES6–ES2024 Features</summary>
+<div class="details-body">
+<h4>Destructuring</h4>
+<pre><code>// Array destructuring
+const [a, b, ...rest] = [1, 2, 3, 4, 5];
+// a=1, b=2, rest=[3,4,5]
+
+const [,, third] = [1, 2, 3]; // third=3
+
+// With defaults
+const [x = 10, y = 20] = [5];
+// x=5, y=20
+
+// Object destructuring
+const { name, age, ...others } = { name: "Alice", age: 30, city: "NYC" };
+
+// Rename
+const { name: userName } = { name: "Bob" };
+// userName = "Bob"
+
+// Nested
+const { address: { city, zip = "00000" } } = { address: { city: "LA" } };
+
+// In function params
+function greet({ name = "stranger", age = 0 } = {}) {
+  return `${name} is ${age}`;
+}
+greet({ name: "Alice", age: 25 });</code></pre>
+
+<h4>Spread / Rest</h4>
+<pre><code>// Spread in arrays
+const arr1 = [1, 2], arr2 = [3, 4];
+const merged = [...arr1, ...arr2]; // [1,2,3,4]
+
+// Spread in objects (shallow clone)
+const obj1 = { a: 1 };
+const obj2 = { ...obj1, b: 2 }; // { a:1, b:2 }
+const override = { ...obj1, a: 99 }; // { a:99 }
+
+// Rest in functions
+function sum(...nums) { return nums.reduce((a, b) => a + b, 0); }
+
+// Spread to pass array as args
+Math.max(...[1, 5, 3]); // 5</code></pre>
+
+<h4>Generators</h4>
+<pre><code>function* counter(start = 0) {
+  while (true) {
+    const reset = yield start++;
+    if (reset) start = 0;
+  }
+}
+const gen = counter();
+gen.next();        // { value: 0, done: false }
+gen.next();        // { value: 1, done: false }
+gen.next(true);    // { value: 0, done: false } — reset!
+
+// Finite generator
+function* range(start, end, step = 1) {
+  for (let i = start; i < end; i += step) yield i;
+}
+[...range(0, 10, 2)]; // [0, 2, 4, 6, 8]
+
+// Custom iterable with Symbol.iterator
+const countdown = {
+  [Symbol.iterator]() {
+    let n = 3;
+    return {
+      next() {
+        return n > 0
+          ? { value: n--, done: false }
+          : { value: undefined, done: true };
+      }
+    };
+  }
+};
+[...countdown]; // [3, 2, 1]</code></pre>
+
+<h4>WeakMap, WeakSet, WeakRef</h4>
+<pre><code>// WeakMap: keys must be objects, not enumerable, allows GC
+const cache = new WeakMap();
+function process(element) {
+  if (cache.has(element)) return cache.get(element);
+  const result = expensiveComputation(element);
+  cache.set(element, result);
+  return result;
+}
+// When element is GC'd, cache entry is removed automatically
+
+// WeakSet: store objects without preventing GC
+const visited = new WeakSet();
+function visit(node) {
+  if (visited.has(node)) return;
+  visited.add(node);
+  // process...
+}
+
+// WeakRef: hold weak reference
+let obj = { data: "big" };
+const ref = new WeakRef(obj);
+obj = null; // obj can now be GC'd
+ref.deref(); // object or undefined if GC'd</code></pre>
+
+<h4>Proxy and Reflect</h4>
+<pre><code>const handler = {
+  get(target, prop, receiver) {
+    console.log(`Getting ${prop}`);
+    return Reflect.get(target, prop, receiver);
+  },
+  set(target, prop, value, receiver) {
+    if (typeof value !== "number") throw new TypeError("Must be number");
+    return Reflect.set(target, prop, value, receiver);
+  },
+  has(target, prop) {
+    console.log(`Checking ${prop}`);
+    return prop in target;
+  }
+};
+
+const data = new Proxy({ x: 1 }, handler);
+data.x;    // logs "Getting x"
+data.y = 5;  // works
+data.y = "a"; // TypeError
+
+// Use cases: validation, logging, virtual properties, reactive systems</code></pre>
+
+<h4>Optional Chaining, Nullish Coalescing, Logical Assignment</h4>
+<pre><code>// Optional chaining ?.
+const city = user?.address?.city;   // undefined instead of TypeError
+const first = arr?.[0];             // safe array access
+const result = obj?.method?.();     // safe method call
+
+// Nullish coalescing: only null/undefined (not 0, "")
+const port = config.port ?? 3000;
+
+// vs OR (problematic for falsy values)
+const port2 = config.port || 3000;  // 0 → 3000 (wrong!)
+
+// Logical assignment
+x ??= defaultValue;  // x = x ?? defaultValue
+x &&= transform(x);  // x = x && transform(x)
+x ||= fallback;      // x = x || fallback
+
+// structuredClone — deep clone
+const deep = { a: { b: { c: 42 } } };
+const clone = structuredClone(deep);
+clone.a.b.c = 99;
+deep.a.b.c; // still 42</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.8 Functions Deep</summary>
+<div class="details-body">
+<h4>Pure Functions &amp; Side Effects</h4>
+<pre><code>// Pure: same input → same output, no side effects
+const add = (a, b) => a + b;          // pure
+const double = arr => arr.map(x=>x*2); // pure (returns new array)
+
+// Impure: mutates, reads external state, I/O
+let count = 0;
+const increment = () => ++count;       // impure (mutates external state)
+const getTime = () => Date.now();      // impure (non-deterministic)</code></pre>
+
+<h4>Currying</h4>
+<pre><code>// Manual currying
+const curry = fn => {
+  const arity = fn.length;
+  return function curried(...args) {
+    if (args.length >= arity) return fn(...args);
+    return (...moreArgs) => curried(...args, ...moreArgs);
+  };
+};
+
+const add = (a, b, c) => a + b + c;
+const curriedAdd = curry(add);
+curriedAdd(1)(2)(3);   // 6
+curriedAdd(1, 2)(3);   // 6
+curriedAdd(1)(2, 3);   // 6
+
+// Real use: configurable functions
+const multiply = curry((factor, value) => factor * value);
+const triple = multiply(3);
+[1, 2, 3].map(triple); // [3, 6, 9]</code></pre>
+
+<h4>Function Composition</h4>
+<pre><code>// compose: right to left
+const compose = (...fns) => x => fns.reduceRight((v, f) => f(v), x);
+
+// pipe: left to right
+const pipe = (...fns) => x => fns.reduce((v, f) => f(v), x);
+
+const trim = s => s.trim();
+const lower = s => s.toLowerCase();
+const split = s => s.split(" ");
+
+const process = pipe(trim, lower, split);
+process("  Hello World  "); // ["hello", "world"]</code></pre>
+
+<h4>Memoization</h4>
+<pre><code>function memoize(fn) {
+  const cache = new Map();
+  return function(...args) {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key);
+    const val = fn.apply(this, args);
+    cache.set(key, val);
+    return val;
+  };
+}
+
+// Fibonacci with memoization
+const fib = memoize(function(n) {
+  if (n <= 1) return n;
+  return fib(n - 1) + fib(n - 2);
+});
+fib(50); // instant instead of exponential</code></pre>
+
+<h4>Tail Call Optimization</h4>
+<pre><code>// Regular recursion: O(n) stack frames
+function factorial(n) {
+  if (n <= 1) return 1;
+  return n * factorial(n - 1); // NOT tail call — multiplies after return
+}
+
+// Tail-recursive: tail call is the LAST operation
+function factorialTCO(n, acc = 1) {
+  if (n <= 1) return acc;
+  return factorialTCO(n - 1, n * acc); // tail call — no work after return
+}
+// ES6 spec mandates TCO in strict mode, but most engines don't implement it
+// Prefer iterative for large n</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.9 Memory &amp; Performance</summary>
+<div class="details-body">
+<h4>Stack vs Heap</h4>
+<p><strong>Stack:</strong> fixed-size, fast LIFO, stores primitives and function call frames. Automatic deallocation.<br>
+<strong>Heap:</strong> dynamic size, slower, stores objects, arrays, closures. Managed by GC.</p>
+
+<h4>Garbage Collection: Mark-and-Sweep</h4>
+<p>Starting from "roots" (global variables, currently executing functions), the GC marks all reachable objects. Everything unreachable is swept (freed). Modern V8 uses generational GC: young generation (Minor GC, fast) and old generation (Major GC, slower).</p>
+
+<h4>Memory Leaks</h4>
+<pre><code>// 1. Forgotten timers
+function startPolling() {
+  setInterval(() => {
+    fetchData(); // interval keeps running even if component unmounts
+  }, 1000);
+}
+// Fix: return clearInterval() in useEffect cleanup
+
+// 2. Closures holding large refs
+function processLargeData() {
+  const HUGE = new Array(1e6).fill("data");
+  return function leaky() {
+    // Only uses HUGE.length but holds entire array in memory
+    return HUGE.length;
+  };
+}
+// Fix: capture only what you need
+function processLargeDataFixed() {
+  const HUGE = new Array(1e6).fill("data");
+  const len = HUGE.length;
+  return function() { return len; }; // HUGE can be GC'd
+}
+
+// 3. Detached DOM nodes
+let button = document.getElementById("btn");
+const handler = () => console.log("clicked");
+button.addEventListener("click", handler);
+document.body.removeChild(button);
+// button still referenced → not GC'd
+// Fix:
+button.removeEventListener("click", handler);
+button = null;
+
+// 4. Global variables accidentally created
+function oops() {
+  leak = "I am global now"; // missing var/let/const
+}
+
+// 5. Event emitters without cleanup
+emitter.on("data", handler);
+// Fix: emitter.off("data", handler) when done</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.10 Modules</summary>
+<div class="details-body">
+<h4>CommonJS (CJS)</h4>
+<pre><code>// Exports
+module.exports = { add, subtract };
+// or
+exports.add = function(a, b) { return a + b; };
+
+// Imports (synchronous, evaluated immediately)
+const { add } = require("./math");
+const fs = require("fs");
+
+// Caching: require() caches modules
+const m1 = require("./mod"); // loads + executes
+const m2 = require("./mod"); // returns SAME cached object
+m1 === m2; // true
+
+// Dynamic require
+const mod = require(`./${type}-handler`);</code></pre>
+
+<h4>ES Modules (ESM)</h4>
+<pre><code>// Named exports
+export const add = (a, b) => a + b;
+export function subtract(a, b) { return a - b; }
+
+// Default export
+export default class Calculator { ... }
+
+// Named imports
+import { add, subtract } from "./math.js";
+
+// Default import
+import Calculator from "./calculator.js";
+
+// Namespace import
+import * as math from "./math.js";
+
+// Re-export
+export { add } from "./math.js";
+export * from "./utils.js";
+
+// Live bindings (vs CJS snapshot)
+// counter.js
+export let count = 0;
+export const increment = () => count++;
+
+// main.js
+import { count, increment } from "./counter.js";
+increment();
+console.log(count); // 1 — live binding updated!
+// CJS equivalent would still show 0 (snapshot)</code></pre>
+
+<h4>Dynamic Imports</h4>
+<pre><code>// import() returns a Promise — works in both CJS and ESM contexts
+const loadModule = async () => {
+  const { default: Chart } = await import("./Chart.js");
+  const chart = new Chart();
+};
+
+// Code splitting in React
+const LazyPage = React.lazy(() => import("./HeavyPage"));
+
+// Conditional loading
+if (user.isAdmin) {
+  const { AdminPanel } = await import("./AdminPanel.js");
+}</code></pre>
+
+<h4>Circular Dependencies</h4>
+<pre><code>// CJS: returns whatever has been exported SO FAR (partial object)
+// a.js: const b = require("./b"); exports.a = 1;
+// b.js: const a = require("./a"); console.log(a.a); // undefined!
+
+// ESM: live bindings handle circulars better — the binding exists
+// even if the value isn't set yet (TDZ-like, but at module level)</code></pre>
+</div>
+</details>
+
+<details>
+<summary>1.11 Tricky Interview Questions</summary>
+<div class="details-body">
+<div class="tricky-box">
+<h4>Output puzzles</h4>
+
+<pre><code>// Q1: What does [] + [] produce?
+[] + []
+// "" + "" = ""  (arrays coerce to strings, empty → "")
+
+// Q2: What does {} + [] produce?
+{} + []
+// In statement position: {} is empty block, + [] = +"" = 0 → Output: 0
+// As expression: ({}) + [] = "[object Object]"
+
+// Q3: [] == false
+[] == false
+// [] → "" → 0; false → 0; 0 == 0 → true
+
+// Q4: Closure in var loop
+for (var i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0);
+}
+// Output: 3 3 3</code></pre>
+<div class="answer">Answers: "", 0 (statement) or "[object Object]" (expression), true, 3 3 3</div>
+
+<pre><code>// Q5: Promise execution order
+console.log("start");
+setTimeout(() => console.log("timeout"), 0);
+Promise.resolve().then(() => console.log("promise1"))
+  .then(() => console.log("promise2"));
+console.log("end");</code></pre>
+<div class="answer">Output: start, end, promise1, promise2, timeout</div>
+
+<pre><code>// Q6: arguments vs rest
+function f() {
+  console.log(arguments[0]);
+}
+const g = (...args) => {
+  console.log(args[0]);
+};
+f(1); // 1 — arguments available in regular functions
+g(1); // 1 — args is a real array
+
+// Arrow functions have NO arguments object
+const h = () => console.log(arguments); // ReferenceError in strict mode</code></pre>
+
+<pre><code>// Q7: delete
+var x = 1;
+delete x;    // false — cannot delete var declarations
+console.log(x); // 1 — still there
+
+const obj = { a: 1 };
+delete obj.a; // true
+console.log(obj.a); // undefined</code></pre>
+
+<pre><code>// Q8: typeof undeclared variable
+typeof undeclaredVar; // "undefined" (no error!)
+undeclaredVar;        // ReferenceError</code></pre>
+
+<pre><code>// Q9: What is printed?
+function foo() {
+  return {
+    bar: "baz"
+  };
+}
+function foo2() {
+  return
+  {
+    bar: "baz"  // ASI inserts semicolon after return!
+  };
+}
+foo();  // { bar: "baz" }
+foo2(); // undefined ← Automatic Semicolon Insertion!</code></pre>
+</div>
+</div>
+</details>
+
+<div class="key-takeaways">
+  <h3>⚡ Key Takeaways</h3>
+  <ul>
+    <li><code>typeof null === "object"</code> is a historical bug — always use <code>=== null</code> to check for null</li>
+    <li><code>NaN</code> is the only value not equal to itself; use <code>Number.isNaN()</code>, not <code>isNaN()</code></li>
+    <li>Closures capture variable <em>references</em>, not values — the classic loop <code>var</code> bug stems from this</li>
+    <li>Event loop order: call stack → microtasks (Promises, queueMicrotask) → macrotasks (setTimeout, I/O)</li>
+    <li><code>==</code> performs type coercion via the Abstract Equality algorithm; prefer <code>===</code></li>
+    <li>Prototype chain walks up <code>__proto__</code> until <code>null</code>; <code>hasOwnProperty</code> checks own properties only</li>
+    <li><code>async/await</code> is syntactic sugar over Promises; errors must be caught with <code>try/catch</code></li>
+    <li><code>Object.is()</code> distinguishes <code>-0</code> from <code>+0</code> and treats <code>NaN === NaN</code></li>
+  </ul>
+</div>

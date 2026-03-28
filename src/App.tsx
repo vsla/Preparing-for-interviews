@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { SectionContent } from './components/SectionContent';
 import { guideSections } from './content/guideSections';
 import { Sidebar } from './Sidebar';
 import { useReadingProgress, useSectionSpy } from './hooks/useGuideChrome';
@@ -30,7 +31,7 @@ export default function App() {
         </div>
         {guideSections.map((s) => (
           <section key={s.id} id={s.id} className={s.sectionClass}>
-            <div dangerouslySetInnerHTML={{ __html: s.html }} />
+            <SectionContent content={s.content} />
           </section>
         ))}
         <button

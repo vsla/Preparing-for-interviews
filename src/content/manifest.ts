@@ -6,7 +6,7 @@ export type GuideSectionMeta = {
   navCount: string;
 };
 
-/** Nav labels, theme classes, and sidebar topic counts — edit here without touching section HTML. */
+/** Nav labels and theme classes. `navCount` is overwritten at runtime from each JSON file's topic count. */
 export const sectionManifest: GuideSectionMeta[] = [
   { id: 'section-1', sectionClass: 'section-js', navClass: 'section-js-nav', navLabel: 'JavaScript', navCount: '11' },
   { id: 'section-2', sectionClass: 'section-css', navClass: 'section-css-nav', navLabel: 'CSS', navCount: '10' },

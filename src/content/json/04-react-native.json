@@ -1,0 +1,47 @@
+{
+  "slug": "04-react-native",
+  "headerHtml": "<h2>4. React Native (Deep) <span class=\"topic-count\">7 topics</span></h2>",
+  "introHtml": "<p class=\"section-intro\">React Native interviews combine React knowledge with mobile platform specifics. Key topics are the JavaScript bridge, the new Fabric/JSI architecture, navigation patterns, performance on low-end devices, and platform-specific styling. Expo vs bare workflow tradeoffs come up frequently.</p>",
+  "topics": [
+    {
+      "summary": "4.1 Architecture",
+      "bodyHtml": "<h4>Old Architecture</h4>\n<p>JavaScript Thread → <strong>Bridge</strong> (async, JSON-serialized messages) → Native Thread. The bridge was a bottleneck: async only, serialization overhead, can't share memory.</p>\n\n<h4>New Architecture (React Native 0.68+)</h4>\n<ul>\n  <li><strong>JSI (JavaScript Interface)</strong>: Direct C++ binding. JS can hold references to native objects and call methods synchronously without serialization.</li>\n  <li><strong>Fabric</strong>: New rendering system. C++ shadow tree, synchronous layout measurement, concurrent features support.</li>\n  <li><strong>TurboModules</strong>: Lazy-loaded native modules via JSI. Only loaded when first used.</li>\n  <li><strong>Codegen</strong>: TypeScript/Flow specs generate native code automatically.</li>\n</ul>\n\n<h4>Hermes Engine</h4>\n<p>Bytecode-compiled JS engine optimized for React Native. Faster startup (pre-compiled), lower memory, built-in debugger. Default since RN 0.70.</p>\n\n<h4>Yoga Layout Engine</h4>\n<p>Cross-platform C++ Flexbox implementation used to calculate layouts. Runs on native thread. Implements a subset of CSS Flexbox.</p>"
+    },
+    {
+      "summary": "4.2 Setup & Environment",
+      "bodyHtml": "<table>\n  <tbody><tr><th>Feature</th><th>Expo Managed</th><th>Expo Bare</th><th>React Native CLI</th></tr>\n  <tr><td>Native code access</td><td>Limited (Expo SDK)</td><td>Full</td><td>Full</td></tr>\n  <tr><td>Build setup</td><td>None (EAS)</td><td>Xcode/Android Studio</td><td>Xcode/Android Studio</td></tr>\n  <tr><td>OTA updates</td><td>Yes (Expo Updates)</td><td>Yes</td><td>Manual</td></tr>\n  <tr><td>Best for</td><td>Quick start, most apps</td><td>Most apps needing native</td><td>Full native control</td></tr>\n</tbody></table>\n\n<pre><code>// Metro bundler: JS bundler for React Native\n// Handles: module resolution, transformation, hot reloading\n// Config: metro.config.js\n\n// Expo Go: sandboxed app to preview managed workflow apps\n// Development builds: full native app with Expo modules\n// Required for: custom native code, debugging native modules</code></pre>"
+    },
+    {
+      "summary": "4.3 Navigation",
+      "bodyHtml": "<pre><code>import { NavigationContainer } from \"@react-navigation/native\";\nimport { createNativeStackNavigator } from \"@react-navigation/native-stack\";\nimport { createBottomTabNavigator } from \"@react-navigation/bottom-tabs\";\n\nconst Stack = createNativeStackNavigator();\nconst Tab = createBottomTabNavigator();\n\nfunction App() {\n  return (\n    &lt;NavigationContainer&gt;\n      &lt;Tab.Navigator&gt;\n        &lt;Tab.Screen name=\"Home\" component={HomeStack} /&gt;\n        &lt;Tab.Screen name=\"Profile\" component={ProfileScreen} /&gt;\n      &lt;/Tab.Navigator&gt;\n    &lt;/NavigationContainer&gt;\n  );\n}\n\n// Navigating\nconst navigation = useNavigation();\nnavigation.navigate(\"Details\", { id: 123 });\nnavigation.goBack();\nnavigation.replace(\"Login\"); // replace current screen\n\n// Reading params\nconst route = useRoute();\nconst { id } = route.params;\n\n// Focus effect (runs when screen comes into focus)\nuseFocusEffect(useCallback(() =&gt; {\n  fetchData();\n  return () =&gt; cleanup();\n}, []));\n\n// Deep linking config\nconst linking = {\n  prefixes: [\"myapp://\", \"https://myapp.com\"],\n  config: {\n    screens: {\n      Home: \"\", Profile: \"user/:id\", Details: \"post/:postId\"\n    }\n  }\n};</code></pre>"
+    },
+    {
+      "summary": "4.4 Styling",
+      "bodyHtml": "<pre><code>import { StyleSheet, Platform } from \"react-native\";\n\nconst styles = StyleSheet.create({\n  container: {\n    flex: 1,\n    backgroundColor: \"#fff\",\n    // No px units — density-independent pixels by default\n    padding: 16,\n    // No shorthand: use paddingHorizontal, paddingVertical\n    paddingHorizontal: 16,\n  },\n  shadow: {\n    // iOS shadow\n    shadowColor: \"#000\",\n    shadowOffset: { width: 0, height: 2 },\n    shadowOpacity: 0.25,\n    shadowRadius: 4,\n    // Android shadow\n    elevation: 5,\n  }\n});\n\n// Platform-specific styles\nconst platformStyle = {\n  ...Platform.select({\n    ios:     { fontFamily: \"SF Pro\" },\n    android: { fontFamily: \"Roboto\" },\n    default: { fontFamily: \"system-ui\" }\n  })\n};\n\n// No CSS cascade — each component must have its own styles\n// No CSS inheritance — font size set on View doesn't apply to Text inside\n// Exception: Text inside Text does inherit styles</code></pre>"
+    },
+    {
+      "summary": "4.5 Core Components",
+      "bodyHtml": "<pre><code>// View: like div — layout container\n// Text: all text must be inside Text (no bare strings)\n// Image: local or remote\n&lt;Image source={{ uri: \"https://...\" }} style={{ width: 100, height: 100 }} /&gt;\n&lt;Image source={require(\"./local.png\")} /&gt;\n\n// ScrollView vs FlatList\n// ScrollView: renders ALL children immediately — good for small lists\n// FlatList: virtualizes — only renders visible items\n&lt;FlatList\n  data={items}\n  keyExtractor={item =&gt; item.id.toString()}\n  renderItem={({ item }) =&gt; &lt;ItemCard item={item} /&gt;}\n  ItemSeparatorComponent={() =&gt; &lt;View style={styles.separator} /&gt;}\n  ListEmptyComponent={&lt;Text&gt;No items&lt;/Text&gt;}\n  onEndReached={loadMore}\n  onEndReachedThreshold={0.5}\n/&gt;\n\n// Touchable components\n&lt;TouchableOpacity onPress={handlePress} activeOpacity={0.7}&gt;\n  &lt;Text&gt;Press me&lt;/Text&gt;\n&lt;/TouchableOpacity&gt;\n\n// Pressable: more control (preferred)\n&lt;Pressable\n  onPress={handlePress}\n  style={({ pressed }) =&gt; [styles.btn, pressed &amp;&amp; styles.pressed]}\n&gt;\n  &lt;Text&gt;Press&lt;/Text&gt;\n&lt;/Pressable&gt;\n\n// TextInput keyboard handling\n&lt;TextInput\n  onChangeText={setValue}\n  value={value}\n  returnKeyType=\"done\"\n  onSubmitEditing={handleSubmit}\n  blurOnSubmit={true}\n  keyboardType=\"email-address\"\n  autoCapitalize=\"none\"\n/&gt;</code></pre>"
+    },
+    {
+      "summary": "4.6 Performance",
+      "bodyHtml": "<pre><code>// useNativeDriver: run animations on native thread (avoids JS bridge)\nAnimated.timing(opacity, {\n  toValue: 1,\n  duration: 300,\n  useNativeDriver: true, // only for transform, opacity — NOT layout props\n}).start();\n\n// InteractionManager: defer expensive work until animations complete\nInteractionManager.runAfterInteractions(() =&gt; {\n  fetchHeavyData(); // runs after animation\n});\n\n// FlatList performance\nconst renderItem = useCallback(({ item }) =&gt; (\n  &lt;ItemCard item={item} /&gt;\n), []); // stable reference — important for FlatList\n\nconst keyExtractor = useCallback(item =&gt; item.id, []);\n\n// Image caching\n// Use expo-image or @d11/react-native-fast-image for better caching\nimport { Image } from \"expo-image\";\n&lt;Image source={{ uri }} contentFit=\"cover\" transition={200} /&gt;</code></pre>"
+    },
+    {
+      "summary": "4.7 Native Modules & Bridging",
+      "bodyHtml": "<pre><code>// Expo Modules API (recommended for new modules)\n// my-module/src/MyModule.ts\nimport { NativeModule, requireNativeModule } from \"expo-modules-core\";\nconst MyModule = requireNativeModule(\"MyModule\");\nexport function doSomethingNative(): Promise&lt;string&gt; {\n  return MyModule.doSomething();\n}\n\n// When to write a native module:\n// - Platform API not in Expo SDK\n// - Performance-critical code (image processing, crypto)\n// - Existing native SDK integration\n\n// TurboModules (new arch): synchronous or async via JSI\n// Legacy Modules (old arch): async JSON bridge only</code></pre>"
+    }
+  ],
+  "keyTakeaways": {
+    "title": "⚡ Key Takeaways",
+    "itemsHtml": [
+      "Old architecture: JS thread communicates with native via serialized bridge — the main performance bottleneck",
+      "New architecture (Fabric + JSI): synchronous native calls via C++ host objects, no serialization overhead",
+      "<code>FlatList</code> virtualizes off-screen items; never use a plain <code>ScrollView</code> for long lists",
+      "Styles are inline JS objects resolved to native constraints — no cascade, no specificity rules",
+      "React Navigation stack navigators preserve state; tab navigators mount all screens on initialization",
+      "<code>Platform.OS</code> and platform-specific file extensions (<code>.ios.js</code> / <code>.android.js</code>) are the two branching strategies",
+      "<code>InteractionManager.runAfterInteractions</code> defers heavy work until after animations complete"
+    ]
+  }
+}

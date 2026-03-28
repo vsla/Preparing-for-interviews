@@ -20,6 +20,60 @@
       "bodyHtml": "<pre><code>// Data structures\nSET key \"value\" EX 3600    // String with TTL\nINCR counter               // Atomic increment\n\nLPUSH list a b c           // List (push left)\nLRANGE list 0 -1           // Get all\n\nHSET user:1 name \"Alice\" age 30   // Hash\nHGETALL user:1\n\nSADD tags \"js\" \"node\"      // Set\nSMEMBERS tags\n\n// Sorted Set: leaderboard\nZADD leaderboard 1500 \"Alice\"\nZADD leaderboard 2000 \"Bob\"\nZRANGE leaderboard 0 -1 WITHSCORES REV  // top scores\nZRANK leaderboard \"Alice\"\n\n// Persistence: RDB (snapshot), AOF (log every write), both\n\n// Distributed lock (Redlock)\nconst lock = await redis.set(\"lock:resource\", uuid, \"NX\", \"PX\", 30000);\n// NX: only if not exists; PX: millisecond TTL\n\n// Rate limiting\nconst now = Date.now();\nconst pipe = redis.pipeline();\npipe.zremrangebyscore(key, 0, now - 60000);\npipe.zadd(key, now, `${now}-${Math.random()}`);\npipe.zcard(key);\npipe.pexpire(key, 60000);\nconst [[,],[,],[,count]] = await pipe.exec();\nif (count &gt; 100) throw new RateLimitError();\n\n// Pub/Sub\npublisher.publish(\"channel\", JSON.stringify(event));\nsubscriber.subscribe(\"channel\", (msg) =&gt; handle(JSON.parse(msg)));\n\n// Redis Cluster: 16384 hash slots, hash_slot = CRC16(key) % 16384\n// Hash tags for multi-key ops: {user}:data1, {user}:data2 go same slot</code></pre>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "How would you explain the difference between an index scan and a full table scan?",
+            "answerHtml": "<p>A full table scan reads every row because the database has no cheaper access path. An index scan uses an auxiliary data structure to narrow down matching rows quickly, often trading extra write cost and storage for faster reads.</p>",
+            "difficulty": "junior",
+            "tags": ["indexes", "query-planning", "sql"],
+            "flashcardFront": "Why do indexes speed up reads?",
+            "flashcardBackHtml": "<p>They provide a faster path to matching rows so the database does not need to scan the whole table.</p>"
+          },
+          {
+            "question": "When would you choose PostgreSQL over MongoDB, and when would the reverse make sense?",
+            "answerHtml": "<p>Choose PostgreSQL when strong relational modeling, joins, transactions, constraints, and mature SQL tooling matter. Choose MongoDB when document flexibility, rapidly evolving shapes, or denormalized read models fit the workload better. Good answers center on access patterns and consistency needs, not hype.</p>",
+            "difficulty": "mid",
+            "tags": ["postgresql", "mongodb", "tradeoffs"],
+            "flashcardFront": "Postgres vs MongoDB",
+            "flashcardBackHtml": "<p>Postgres is stronger for relational consistency and joins; MongoDB is stronger for flexible document-oriented models.</p>"
+          },
+          {
+            "question": "What makes Redis different from a primary database, and when is that difference valuable?",
+            "answerHtml": "<p>Redis is an in-memory data structure store optimized for extremely low latency access patterns such as caching, counters, locks, queues, and ephemeral coordination. It can persist data, but it is usually used where speed and simple structures matter more than rich querying and durable relational guarantees.</p>",
+            "difficulty": "junior",
+            "tags": ["redis", "caching", "data-stores"]
+          }
+        ]
+      },
+      {
+        "title": "Deep-dive and scenario prompts",
+        "items": [
+          {
+            "question": "A query is fast in development but slow in production with millions of rows. What would you inspect first?",
+            "answerHtml": "<p>Check the execution plan, existing indexes, cardinality estimates, join order, filter selectivity, and whether the query is forcing sort or scan-heavy work. I would also compare data distribution and parameter values because production slowness often comes from scale and skew, not just syntax.</p>",
+            "difficulty": "mid",
+            "tags": ["performance", "query-plans", "debugging"]
+          },
+          {
+            "question": "What anomalies can happen when isolation is too weak, and how would you explain them quickly?",
+            "answerHtml": "<p>Common anomalies include dirty reads, non-repeatable reads, and phantom reads. A strong short answer says weaker isolation improves concurrency but risks seeing data that changes unexpectedly during a transaction, while stronger isolation reduces anomalies at the cost of contention.</p>",
+            "difficulty": "senior",
+            "tags": ["transactions", "isolation", "consistency"]
+          },
+          {
+            "question": "Your cache and database diverge after writes. What strategies reduce stale reads?",
+            "answerHtml": "<p>Use clear cache invalidation rules, shorter TTLs where needed, versioned keys, or write-through patterns when consistency matters. If the cache is auxiliary rather than authoritative, the application should also tolerate occasional misses and stale values instead of assuming perfect coherence.</p>",
+            "difficulty": "mid",
+            "tags": ["redis", "caching", "consistency"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

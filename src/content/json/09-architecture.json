@@ -28,6 +28,60 @@
       "bodyHtml": "<pre><code>// MVC: Model (data/logic) — View (UI) — Controller (glue)\n// MVP: Model — View (passive, dumb) — Presenter (all logic, updates view)\n// MVVM: Model — View — ViewModel (data bindings, two-way reactive)\n\n// Clean Architecture (Hexagonal / Ports and Adapters)\n// Core rule: dependencies point INWARD only\n// Entities (enterprise rules) &lt;-- Use Cases &lt;-- Interface Adapters &lt;-- Frameworks\n\n// Suggested structure:\n// src/domain/         entities, value objects, domain events\n// src/application/    use cases, DTOs, ports (interfaces)\n// src/infrastructure/ DB adapters, HTTP clients, email, Redis\n// src/interfaces/     HTTP controllers, GraphQL resolvers, CLI\n\n// Domain-Driven Design (DDD) key concepts:\n// Bounded Context: explicit boundary where a domain model applies\n// Aggregate: cluster of objects with one root (consistency boundary)\n// Repository: collection-like interface for aggregates\n// Domain Event: something significant that happened in the domain\n// Value Object: no identity, equality by value (Money, Address, Email)\n// Entity: has identity (User, Order, Product)</code></pre>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "How would you explain SOLID in a way that sounds practical rather than academic?",
+            "answerHtml": "<p>I would frame SOLID as a set of heuristics for making code easier to change: keep responsibilities focused, design abstractions that can be extended safely, avoid forcing callers to depend on things they do not need, and prefer depending on contracts rather than concrete details.</p>",
+            "difficulty": "mid",
+            "tags": ["solid", "design-principles", "maintainability"],
+            "flashcardFront": "Purpose of SOLID",
+            "flashcardBackHtml": "<p>SOLID is a set of design heuristics that helps code stay changeable, testable, and easier to reason about.</p>"
+          },
+          {
+            "question": "What is the difference between a design pattern and an architectural pattern?",
+            "answerHtml": "<p>A design pattern usually addresses a localized object or module collaboration problem, such as composition or behavior delegation. An architectural pattern shapes the whole system, such as layered architecture, event-driven systems, or microservices.</p>",
+            "difficulty": "junior",
+            "tags": ["patterns", "architecture", "terminology"]
+          },
+          {
+            "question": "Why is composition often preferred over inheritance?",
+            "answerHtml": "<p>Composition gives you smaller reusable pieces with fewer rigid coupling constraints. Inheritance can create brittle hierarchies where behavior leaks across levels and changes ripple unexpectedly. Composition usually keeps behavior easier to swap, test, and evolve.</p>",
+            "difficulty": "mid",
+            "tags": ["composition", "inheritance", "oop"],
+            "flashcardFront": "Composition over inheritance",
+            "flashcardBackHtml": "<p>Composition is usually more flexible and less tightly coupled than deep inheritance hierarchies.</p>"
+          }
+        ]
+      },
+      {
+        "title": "Scenario and design prompts",
+        "items": [
+          {
+            "question": "A codebase has many `if` statements switching on type names. Which patterns might reduce that smell?",
+            "answerHtml": "<p>Depending on the problem, I would consider polymorphism, strategy, command, or factory patterns. The core idea is to move branching logic closer to behavior so the system becomes easier to extend without editing one giant conditional block.</p>",
+            "difficulty": "mid",
+            "tags": ["strategy", "polymorphism", "refactoring"]
+          },
+          {
+            "question": "How would you decide whether a new service boundary is real or just accidental complexity?",
+            "answerHtml": "<p>I would look for separate scaling needs, ownership boundaries, deployment cadence, failure isolation requirements, and distinct domain concepts. If the split only adds network calls without solving one of those problems, it is probably premature architecture.</p>",
+            "difficulty": "senior",
+            "tags": ["service-boundaries", "microservices", "tradeoffs"]
+          },
+          {
+            "question": "When does layering help and when does it become ceremony?",
+            "answerHtml": "<p>Layering helps when it clarifies dependencies and separates concerns such as transport, domain, and persistence. It becomes ceremony when every change requires touching many pass-through abstractions that add no decision-making value or hide the important domain logic behind indirection.</p>",
+            "difficulty": "senior",
+            "tags": ["layered-architecture", "tradeoffs", "maintainability"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

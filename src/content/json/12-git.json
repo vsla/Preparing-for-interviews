@@ -8,6 +8,54 @@
       "bodyHtml": "<h4>Merge vs Rebase</h4>\n<pre><code># Merge: creates merge commit, preserves history\ngit checkout main\ngit merge feature/login  # merge commit created, diverge is visible in log\n\n# Rebase: moves feature commits to tip of target, linear history\ngit checkout feature/login\ngit rebase main  # replays feature commits on top of current main\n\n# Golden Rule of Rebase:\n# NEVER rebase public/shared branches (rewrites history = new commit SHAs)\n# Safe: rebase local feature branches before creating PR\n\n# Interactive rebase: rewrite last N commits\ngit rebase -i HEAD~4\n# pick   = use commit as-is\n# reword = change commit message\n# edit   = pause to amend commit (git commit --amend, then git rebase --continue)\n# squash = combine with previous commit (keep both messages)\n# fixup  = combine, discard this commit's message\n# drop   = remove commit entirely</code></pre>\n\n<h4>Useful Commands</h4>\n<pre><code># Stash: temporarily save uncommitted work\ngit stash push -m \"WIP: login feature\"\ngit stash list                   # list all stashes\ngit stash pop                    # apply latest and remove\ngit stash apply stash@{2}        # apply specific, keep in stash\ngit stash drop stash@{0}         # delete specific stash\n\n# Cherry-pick: apply specific commit(s) to current branch\ngit cherry-pick abc123\ngit cherry-pick abc123^..def456  # range (inclusive)\n\n# Bisect: binary search for bug-introducing commit\ngit bisect start\ngit bisect bad HEAD              # current commit is bad\ngit bisect good v1.2.0           # last known good tag\n# Git checks out middle commit, you test, then:\ngit bisect good  # or bad\n# Repeat until Git reports the first bad commit\ngit bisect reset\n\n# Reflog: safety net — all HEAD movements\ngit reflog\ngit checkout HEAD@{5}            # restore to 5 HEAD moves ago\ngit reset --hard HEAD@{3}        # undo to 3 reflog entries ago</code></pre>\n\n<h4>Branching Strategies</h4>\n<table>\n  <tbody><tr><th>Strategy</th><th>Description</th><th>Best for</th></tr>\n  <tr><td>Git Flow</td><td>main + develop + feature/ + release/ + hotfix/ branches</td><td>Scheduled releases, enterprise, mobile apps</td></tr>\n  <tr><td>Trunk-based</td><td>Short-lived branches, frequent merges to main, feature flags</td><td>CI/CD, fast-moving teams, SaaS</td></tr>\n  <tr><td>GitHub Flow</td><td>main + feature branches via PRs</td><td>Web apps, continuous deployment</td></tr>\n</tbody></table>\n\n<h4>Conventional Commits</h4>\n<pre><code># Format: type(scope): description\nfeat(auth): add OAuth2 login with Google\nfix(api): handle null user in profile endpoint\ndocs(readme): update local setup instructions\nrefactor(db): extract connection pool to module\ntest(user): add integration tests for registration\nperf(feed): use cursor pagination for news feed\nci(github): add Playwright E2E to CI workflow\nchore(deps): upgrade express to 5.0\n\n# Breaking change: add ! or BREAKING CHANGE in footer\nfeat!: remove deprecated v1 API endpoints\n# or:\nfeat(api): new auth system\nBREAKING CHANGE: Remove /auth/login, use /auth/token instead</code></pre>\n\n<h4>Semantic Versioning</h4>\n<p><code>MAJOR.MINOR.PATCH</code> example: <code>2.1.3</code><br>\n<strong>PATCH</strong> (2.1.x): backwards-compatible bug fixes<br>\n<strong>MINOR</strong> (2.x.0): backwards-compatible new features<br>\n<strong>MAJOR</strong> (x.0.0): breaking changes<br>\nPre-release: <code>1.0.0-alpha.1</code>, <code>2.0.0-rc.3</code><br>\nBuild metadata: <code>1.0.0+20240301</code></p>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "What is the difference between the working tree, the index, and the commit history?",
+            "answerHtml": "<p>The working tree is your current filesystem state. The index, or staging area, is the snapshot you are preparing for the next commit. Commit history is the series of immutable snapshots already recorded in the repository.</p>",
+            "difficulty": "junior",
+            "tags": ["git-basics", "staging", "commits"],
+            "flashcardFront": "Working tree vs index",
+            "flashcardBackHtml": "<p>The working tree is what you are editing now; the index is what will go into the next commit.</p>"
+          },
+          {
+            "question": "How do merge and rebase differ conceptually?",
+            "answerHtml": "<p>Merge preserves the actual branch history by creating a merge commit. Rebase rewrites commits so they appear on top of a new base, producing a cleaner linear history but changing commit identities. The practical tradeoff is history clarity versus history preservation.</p>",
+            "difficulty": "junior",
+            "tags": ["merge", "rebase", "history"],
+            "flashcardFront": "Merge vs rebase",
+            "flashcardBackHtml": "<p>Merge preserves branch topology; rebase rewrites commits onto a new base for a linear history.</p>"
+          },
+          {
+            "question": "Why is force pushing dangerous on shared branches?",
+            "answerHtml": "<p>It rewrites remote history and can discard or orphan teammates' commits if they built on the previous state. It is safest only when everyone understands the workflow and the branch is intentionally disposable.</p>",
+            "difficulty": "junior",
+            "tags": ["force-push", "collaboration", "workflow"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and workflow prompts",
+        "items": [
+          {
+            "question": "You made three messy commits locally and want one clean commit before opening a PR. What options do you have?",
+            "answerHtml": "<p>You can do an interactive rebase to squash or reorder commits before pushing, or create a new branch and cherry-pick the clean changes. The key is to rewrite local history before it becomes shared remote history.</p>",
+            "difficulty": "mid",
+            "tags": ["rebase", "squash", "pull-requests"]
+          },
+          {
+            "question": "A merge conflict appears in a file you barely touched. How would you reason about resolving it safely?",
+            "answerHtml": "<p>I would understand both sides of the conflict semantically, not just choose ours or theirs blindly. The safe path is to read the nearby code, preserve both required changes, run tests if possible, and avoid treating conflict markers as a mechanical text problem.</p>",
+            "difficulty": "mid",
+            "tags": ["merge-conflicts", "debugging", "workflow"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

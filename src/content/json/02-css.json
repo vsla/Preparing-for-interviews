@@ -44,6 +44,60 @@
       "bodyHtml": "<div class=\"tricky-box\">\n<h4>Common gotchas</h4>\n<pre><code>/* Q: Why doesn't vertical margin work on inline elements? */\n/* A: Inline elements respect left/right margin but top/bottom\n      doesn't affect surrounding elements — use line-height */\n\n/* Q: What is a stacking context and what creates one? */\n/* A: Isolated z-index group. Created by: opacity &lt; 1,\n      transforms, filters, position+z-index, will-change,\n      isolation: isolate, fixed/sticky */\n\n/* Q: Why does my absolute element not position relative to parent? */\n/* A: Parent needs position != static (relative/absolute/fixed/sticky) */\n\n/* Q: Why doesn't sticky work? */\n/* A: Check for overflow:hidden on any ancestor */\n/* A: Element must have top/left/right/bottom set */\n/* A: Parent must be taller than the sticky element */\n\n/* Q: Specificity of :not() */\n/* A: :not() itself has 0 specificity, but its argument counts */\ndiv:not(.special)  → 0,0,1,1 (class + element)\n*:not(p)           → 0,0,0,1 (just element)</code></pre>\n</div>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "What is the default CSS box model, and how does `box-sizing: border-box` change layout math?",
+            "answerHtml": "<p>In the default content-box model, declared width and height apply only to content, so padding and border add to the final rendered size. With <code>border-box</code>, the declared width and height include padding and border, which makes sizing layouts more predictable.</p>",
+            "difficulty": "junior",
+            "tags": ["box-model", "layout", "sizing"],
+            "flashcardFront": "content-box vs border-box",
+            "flashcardBackHtml": "<p>Content-box excludes padding and border from declared size; border-box includes them.</p>"
+          },
+          {
+            "question": "How do Flexbox and Grid differ, and when is one a better fit than the other?",
+            "answerHtml": "<p>Flexbox is primarily one-dimensional and excels when distributing items along a row or column. Grid is two-dimensional and is better for explicit rows and columns, overall page layout, and placement that depends on both axes.</p>",
+            "difficulty": "junior",
+            "tags": ["flexbox", "grid", "layout"],
+            "flashcardFront": "Flexbox vs Grid",
+            "flashcardBackHtml": "<p>Flexbox is one-dimensional; Grid is two-dimensional.</p>"
+          },
+          {
+            "question": "How do specificity, cascade, and source order work together when two rules conflict?",
+            "answerHtml": "<p>The browser first compares origin and importance, then specificity, and finally source order when specificity ties. A weaker selector later in the file does not beat a stronger selector unless importance or origin changes the comparison.</p>",
+            "difficulty": "mid",
+            "tags": ["specificity", "cascade", "selectors"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and debugging prompts",
+        "items": [
+          {
+            "question": "A `position: sticky` element does not stick. What conditions would you check?",
+            "answerHtml": "<p>I would check whether a threshold such as <code>top</code> is set, whether an ancestor has overflow clipping, whether the sticky element is inside the expected scrolling container, and whether its parent is tall enough for stickiness to become visible.</p>",
+            "difficulty": "mid",
+            "tags": ["positioning", "sticky", "debugging"]
+          },
+          {
+            "question": "A flex item refuses to shrink and causes horizontal overflow. What is the usual culprit?",
+            "answerHtml": "<p>A common culprit is the default minimum size behavior of flex items. Setting <code>min-width: 0</code> or <code>overflow: hidden</code> on the child often allows long text or nested content to shrink properly within the flex container.</p>",
+            "difficulty": "mid",
+            "tags": ["flexbox", "overflow", "debugging"]
+          },
+          {
+            "question": "How would you explain responsive design beyond just media queries?",
+            "answerHtml": "<p>Responsive design means layouts adapt to available space, input modes, and device constraints. Media queries are one tool, but fluid sizing, flexible layout systems, intrinsic content sizing, accessible tap targets, and performance-aware asset loading are all part of the answer.</p>",
+            "difficulty": "mid",
+            "tags": ["responsive-design", "media-queries", "accessibility"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

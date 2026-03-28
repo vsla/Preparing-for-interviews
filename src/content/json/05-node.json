@@ -32,6 +32,83 @@
       "bodyHtml": "<pre><code>// PM2: process manager\n// pm2 start app.js -i max    -- cluster mode (one process per CPU)\n// pm2 reload app             -- zero-downtime reload\n// pm2 monit                  -- monitoring dashboard\n\n// Cluster module\nconst cluster = require(\"cluster\");\nconst os = require(\"os\");\n\nif (cluster.isPrimary) {\n  os.cpus().forEach(() =&gt; cluster.fork());\n  cluster.on(\"exit\", (worker) =&gt; {\n    console.log(`Worker ${worker.id} died, forking new`);\n    cluster.fork();\n  });\n} else {\n  require(\"./app\"); // each worker runs app\n}\n\n// Connection pooling with pg\nimport { Pool } from \"pg\";\nconst pool = new Pool({ max: 20, idleTimeoutMillis: 30000 });\nconst client = await pool.connect();\ntry {\n  const result = await client.query(\"SELECT * FROM users WHERE id = $1\", [id]);\n} finally {\n  client.release(); // Always release!\n}\n\n// NODE_ENV production effects:\n// - Express: disables dev error messages\n// - React: no dev warnings, smaller bundle\n// - Many libraries optimize behavior</code></pre>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "If Node is single-threaded, what work is actually happening off the main thread?",
+            "answerHtml": "<p>JavaScript execution is single-threaded in one event loop, but libuv uses a worker pool for many filesystem, crypto, DNS, and compression tasks. The OS also handles network I/O asynchronously. So Node is single-threaded for JS, not for all work in the process.</p>",
+            "difficulty": "junior",
+            "tags": ["event-loop", "libuv", "architecture"],
+            "flashcardFront": "Is Node really single-threaded?",
+            "flashcardBackHtml": "<p>JavaScript execution is single-threaded, but libuv and the OS handle many operations concurrently.</p>"
+          },
+          {
+            "question": "What is backpressure in streams, and why is it important in production systems?",
+            "answerHtml": "<p>Backpressure is the mechanism that slows a producer when the consumer cannot keep up. Without it, memory usage grows because data buffers faster than it can be processed. Streams and <code>pipe</code> help coordinate flow so large files and responses do not overwhelm RAM.</p>",
+            "difficulty": "mid",
+            "tags": ["streams", "backpressure", "memory"],
+            "flashcardFront": "Backpressure meaning",
+            "flashcardBackHtml": "<p>It is the flow-control signal that prevents producers from overwhelming slower consumers.</p>"
+          },
+          {
+            "question": "How do `process.nextTick`, promise microtasks, `setImmediate`, and `setTimeout` differ in Node?",
+            "answerHtml": "<p><code>process.nextTick</code> runs before the event loop continues, even before other microtasks in many practical explanations of Node behavior. Promise callbacks are microtasks. <code>setImmediate</code> runs in the check phase, while <code>setTimeout</code> runs in the timers phase. Inside I/O callbacks, <code>setImmediate</code> often wins predictably.</p>",
+            "difficulty": "mid",
+            "tags": ["event-loop", "timers", "microtasks"]
+          }
+        ]
+      },
+      {
+        "title": "Deep-dive follow-ups",
+        "items": [
+          {
+            "question": "When would you choose worker threads, cluster, or child processes?",
+            "answerHtml": "<p>Use worker threads for CPU-bound JavaScript work that should share the process more cheaply than full OS processes. Use cluster to scale HTTP handling across CPU cores with multiple Node processes. Use child processes when you need isolation, another runtime, or shell/binary execution.</p>",
+            "difficulty": "senior",
+            "tags": ["worker-threads", "cluster", "child-process"]
+          },
+          {
+            "question": "Why is synchronous filesystem or crypto work dangerous in a request handler?",
+            "answerHtml": "<p>It blocks the event loop, which means no other request callbacks can run during that time. Even small synchronous operations can create latency spikes under concurrency because one blocked loop stalls all in-flight requests handled by that process.</p>",
+            "difficulty": "mid",
+            "tags": ["blocking", "performance", "fs"]
+          },
+          {
+            "question": "How would you explain graceful shutdown in a Node service?",
+            "answerHtml": "<p>Stop accepting new traffic, let in-flight requests finish within a timeout, close database or queue connections, flush logs if needed, and then exit. In Kubernetes or process managers this usually starts with handling <code>SIGTERM</code> properly instead of killing the process abruptly.</p>",
+            "difficulty": "senior",
+            "tags": ["production", "signals", "shutdown"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and debugging prompts",
+        "items": [
+          {
+            "question": "Your Node API shows high CPU even though the database is healthy. What would you investigate first?",
+            "answerHtml": "<p>Look for CPU-heavy JSON parsing, large regex work, hot loops, synchronous crypto/compression, huge in-memory transforms, or excessive logging. I would also capture a CPU profile to confirm whether the bottleneck is userland code, garbage collection, or native bindings.</p>",
+            "difficulty": "senior",
+            "tags": ["debugging", "cpu", "profiling"]
+          },
+          {
+            "question": "Uploads sometimes fail under load and memory spikes sharply. How would streams change the design?",
+            "answerHtml": "<p>Move from buffering whole payloads in memory to streaming from request to storage or a transform pipeline. That keeps memory bounded per connection and lets backpressure slow the sender naturally instead of crashing the process with unbounded buffers.</p>",
+            "difficulty": "mid",
+            "tags": ["streams", "uploads", "scaling"]
+          },
+          {
+            "question": "An Express app occasionally returns duplicate error responses or hangs forever. What middleware mistakes would you check?",
+            "answerHtml": "<p>I would check for missing <code>return</code> statements after sending responses, forgetting to call <code>next()</code>, calling <code>next()</code> after a response was already sent, and async handlers that throw without being wrapped. Middleware order and the four-argument signature for error handlers are common failure points.</p>",
+            "difficulty": "mid",
+            "tags": ["express", "middleware", "debugging"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

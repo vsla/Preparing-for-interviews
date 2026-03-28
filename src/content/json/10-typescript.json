@@ -12,6 +12,54 @@
       "bodyHtml": "<div class=\"tricky-box\">\n<h4>Common gotchas</h4>\n<pre><code>// Q: Why does narrowing not work inside callbacks?\nlet x: string | null = \"hello\";\nsetTimeout(() =&gt; {\n  x.toUpperCase(); // Error: x might be null (could change before callback)\n}, 0);\n// Fix: capture value\nconst copy = x;\nsetTimeout(() =&gt; copy?.toUpperCase(), 0);\n\n// Q: Structural typing — same structure = compatible\ninterface Cat { meow(): void; }\ninterface Dog { meow(): void; } // same shape\nconst cat: Cat = { meow() {} };\nconst dog: Dog = cat; // OK! TS uses structural (not nominal) typing\n\n// Q: Type widening with const\nlet x = 3;        // type: number (widened)\nconst y = 3;      // type: 3 (literal, not widened)\nconst z = [1,2,3] as const; // type: readonly [1, 2, 3]\n\n// Q: keyof typeof\nconst obj = { a: 1, b: 2, c: 3 };\ntype Keys = keyof typeof obj; // \"a\" | \"b\" | \"c\"\nfunction getValue(o: typeof obj, key: Keys) { return o[key]; }\n\n// Q: Conditional distribution\ntype ToArray&lt;T&gt; = T extends any ? T[] : never;\ntype Result = ToArray&lt;string | number&gt;; // string[] | number[] (distributes)\n// vs:\ntype NoDistrib&lt;T&gt; = [T] extends [any] ? T[] : never;\ntype Result2 = NoDistrib&lt;string | number&gt;; // (string | number)[]</code></pre>\n</div>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "What is the difference between `interface` and `type`, and why do people overstate it?",
+            "answerHtml": "<p>Both can describe object shapes. Interfaces are extendable and mergeable, while type aliases are more flexible for unions, intersections, tuples, and mapped types. In most day-to-day object modeling either works, so the better answer is about choosing the clearer tool for the use case rather than treating one as universally superior.</p>",
+            "difficulty": "junior",
+            "tags": ["types", "interfaces", "design"],
+            "flashcardFront": "interface vs type",
+            "flashcardBackHtml": "<p>Interfaces are great for object contracts; type aliases are more flexible for unions, intersections, and advanced compositions.</p>"
+          },
+          {
+            "question": "What problem do generics solve?",
+            "answerHtml": "<p>Generics let you write reusable logic while preserving type information. Instead of returning <code>any</code> or duplicating functions per type, you express a relationship between input and output types so the compiler can infer or enforce correct usage.</p>",
+            "difficulty": "junior",
+            "tags": ["generics", "type-safety", "reusability"],
+            "flashcardFront": "Why use generics?",
+            "flashcardBackHtml": "<p>Generics preserve type information in reusable code instead of falling back to <code>any</code>.</p>"
+          },
+          {
+            "question": "Why is `any` dangerous, and when is it still acceptable?",
+            "answerHtml": "<p><code>any</code> opts out of type checking and lets unsound assumptions spread through the program. It can be acceptable at boundaries when migrating legacy code or dealing with unknown input, but ideally it should be narrowed quickly into safer types such as <code>unknown</code> plus runtime validation.</p>",
+            "difficulty": "junior",
+            "tags": ["any", "unknown", "safety"]
+          }
+        ]
+      },
+      {
+        "title": "Trick and debugging prompts",
+        "items": [
+          {
+            "question": "When would you use `unknown` instead of `any`?",
+            "answerHtml": "<p>Use <code>unknown</code> when a value truly could be anything but you still want the compiler to force validation before use. That makes it ideal at API boundaries, JSON parsing, and untrusted input handling.</p>",
+            "difficulty": "mid",
+            "tags": ["unknown", "narrowing", "api-boundaries"]
+          },
+          {
+            "question": "Why can a type assertion hide real bugs even though the code compiles?",
+            "answerHtml": "<p>A type assertion tells TypeScript to trust you rather than proving safety. If the runtime value does not actually match the asserted shape, the compiler goes silent and the bug moves to production. Assertions should be a last resort, not a replacement for modeling or validation.</p>",
+            "difficulty": "mid",
+            "tags": ["type-assertions", "runtime", "debugging"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

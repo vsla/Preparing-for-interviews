@@ -20,6 +20,60 @@
       "bodyHtml": "<pre><code>// Playwright E2E test\nimport { test, expect } from \"@playwright/test\";\n\ntest(\"user can log in\", async ({ page }) =&gt; {\n  await page.goto(\"/login\");\n  await page.getByLabel(\"Email\").fill(\"user@test.com\");\n  await page.getByLabel(\"Password\").fill(\"password123\");\n  await page.getByRole(\"button\", { name: /log in/i }).click();\n  await expect(page).toHaveURL(\"/dashboard\");\n  await expect(page.getByText(\"Welcome back\")).toBeVisible();\n});\n\ntest(\"shows error on API failure\", async ({ page }) =&gt; {\n  await page.route(\"**/api/users\", route =&gt;\n    route.fulfill({ status: 500, body: \"Server Error\" })\n  );\n  await page.goto(\"/users\");\n  await expect(page.getByText(/failed to load/i)).toBeVisible();\n});\n\n// Selector best practices (most stable to least):\n// 1. data-testid: data-testid=\"submit-btn\"\n// 2. ARIA role: page.getByRole(\"button\", { name: /submit/i })\n// 3. Labels: page.getByLabel(\"Email\")\n// 4. Text: page.getByText(\"Submit\")\n// Avoid: CSS classes (.btn-primary — unstable, style-coupled)\n\n// Cypress equivalent\ncy.visit(\"/login\");\ncy.findByLabelText(\"Email\").type(\"user@test.com\");\ncy.findByRole(\"button\", { name: /login/i }).click();\ncy.url().should(\"include\", \"/dashboard\");\ncy.intercept(\"GET\", \"/api/users\", { statusCode: 500 }).as(\"usersError\");</code></pre>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "How do unit, integration, and end-to-end tests differ in what confidence they provide?",
+            "answerHtml": "<p>Unit tests isolate a small piece of logic and are fast, but they give narrow confidence. Integration tests check collaboration between components such as app code plus a database or API layer. End-to-end tests exercise real user flows and provide the broadest confidence, though they are slower and more brittle.</p>",
+            "difficulty": "junior",
+            "tags": ["testing-types", "confidence", "strategy"],
+            "flashcardFront": "Unit vs integration vs e2e",
+            "flashcardBackHtml": "<p>Unit tests isolate logic, integration tests verify collaborations, and end-to-end tests validate real user flows.</p>"
+          },
+          {
+            "question": "What makes React Testing Library different from Enzyme-style testing philosophies?",
+            "answerHtml": "<p>React Testing Library encourages testing the component the way a user experiences it, through roles, text, labels, and visible behavior. It avoids reaching deeply into component internals, which makes tests more resilient to refactors.</p>",
+            "difficulty": "junior",
+            "tags": ["rtl", "testing-philosophy", "react"],
+            "flashcardFront": "RTL philosophy",
+            "flashcardBackHtml": "<p>Test behavior and accessibility-facing output rather than implementation details.</p>"
+          },
+          {
+            "question": "When are mocks helpful, and when do they make tests less trustworthy?",
+            "answerHtml": "<p>Mocks are helpful when you need isolation, determinism, or to cut off expensive or flaky dependencies. They become harmful when you over-mock behavior that is central to the feature, because the test starts proving your mock setup rather than the real system behavior.</p>",
+            "difficulty": "mid",
+            "tags": ["mocks", "tradeoffs", "test-design"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and debugging prompts",
+        "items": [
+          {
+            "question": "A test suite is slow and flaky. What layers would you examine before rewriting everything?",
+            "answerHtml": "<p>I would identify whether the slowness comes from too many end-to-end tests, bad setup and teardown, shared mutable state, real network calls, fake timers misuse, or tests waiting on unstable selectors. Flakiness is often a test design and environment problem before it is a tooling problem.</p>",
+            "difficulty": "senior",
+            "tags": ["flaky-tests", "performance", "debugging"]
+          },
+          {
+            "question": "How do you decide what is worth testing instead of just chasing coverage numbers?",
+            "answerHtml": "<p>Focus on critical business rules, bug-prone branches, integration boundaries, and behavior that would be expensive or dangerous to break. Coverage can reveal blind spots, but it is not the goal by itself because a high percentage can still miss important failure modes.</p>",
+            "difficulty": "mid",
+            "tags": ["coverage", "strategy", "risk"]
+          },
+          {
+            "question": "A Playwright or Cypress test passes locally but fails in CI. What are the usual suspects?",
+            "answerHtml": "<p>I would check timing assumptions, network stubbing differences, missing environment variables, headless-only behavior, parallel test interference, and selectors that depend on animation or rendering speed. CI usually exposes hidden nondeterminism rather than inventing brand new bugs.</p>",
+            "difficulty": "mid",
+            "tags": ["e2e", "ci", "debugging"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

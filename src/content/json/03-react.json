@@ -28,6 +28,87 @@
       "bodyHtml": "<div class=\"tricky-box\">\n<h4>Common React gotchas</h4>\n<pre><code>// Q: Why does setState in a loop only apply the last update?\nfor (let i = 0; i &lt; 5; i++) {\n  setCount(count + 1); // all use same stale count!\n}\n// Fix: functional update\nfor (let i = 0; i &lt; 5; i++) {\n  setCount(c =&gt; c + 1); // each builds on previous</code></pre>\n<pre><code>// Q: Key prop in lists — why can't we use index?\n// Index as key causes bugs when list is reordered/filtered:\n// React sees key=0 and reuses the DOM node/component state\n// Fix: use stable, unique IDs from data\n\n// Q: When does useEffect cleanup run?\n// 1. Before the effect runs again (deps changed)\n// 2. When component unmounts\n// Order: render → cleanup (if needed) → effect\n\n// Q: Why is my state update not reflected immediately after setState?\nconst handleClick = () =&gt; {\n  setState(42);\n  console.log(state); // still old value! setState is async\n  // State updates are batched and applied on next render\n};</code></pre>\n</div>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "What actually happens from `setState` to the DOM update in React?",
+            "answerHtml": "<p>React schedules an update, renders a new virtual tree, reconciles it against the previous tree, then commits the minimal DOM changes. In modern React, scheduling priority matters, so not all updates are treated equally.</p>",
+            "difficulty": "mid",
+            "tags": ["reconciliation", "rendering", "state"],
+            "flashcardFront": "React render pipeline",
+            "flashcardBackHtml": "<p>Schedule update, render new tree, reconcile differences, then commit DOM changes.</p>"
+          },
+          {
+            "question": "Why do hooks rely on call order, and what breaks when a hook is called conditionally?",
+            "answerHtml": "<p>React associates hook state slots by the order hooks run during rendering. If a hook is skipped in one render, every hook after it shifts to the wrong slot. That is why hooks must run unconditionally at the top level of the component or custom hook.</p>",
+            "difficulty": "junior",
+            "tags": ["hooks", "rules-of-hooks", "state"],
+            "flashcardFront": "Why no conditional hooks?",
+            "flashcardBackHtml": "<p>Because React matches hook state by call order across renders.</p>"
+          },
+          {
+            "question": "How would you explain the difference between controlled and uncontrolled inputs, and when would you choose each?",
+            "answerHtml": "<p>Controlled inputs keep the source of truth in React state and are best when validation, derived UI, or synchronization matter. Uncontrolled inputs let the DOM own the value and are useful for simple forms, interop, or performance-sensitive cases where React does not need every keystroke.</p>",
+            "difficulty": "junior",
+            "tags": ["forms", "controlled", "uncontrolled"],
+            "flashcardFront": "Controlled vs uncontrolled",
+            "flashcardBackHtml": "<p>Controlled means React owns the value. Uncontrolled means the DOM owns the value and React reads it with refs or form submission.</p>"
+          }
+        ]
+      },
+      {
+        "title": "Deep-dive follow-ups",
+        "items": [
+          {
+            "question": "Why does `useEffect` run after paint while `useLayoutEffect` runs before paint, and why does that matter?",
+            "answerHtml": "<p><code>useEffect</code> is for non-blocking side effects that can happen after the browser paints, such as subscriptions or network calls. <code>useLayoutEffect</code> runs synchronously after DOM mutations but before paint, so it is better for measurements or updates that would visibly flicker if delayed.</p>",
+            "difficulty": "mid",
+            "tags": ["hooks", "effects", "rendering"]
+          },
+          {
+            "question": "What problem does `startTransition` solve in React 18?",
+            "answerHtml": "<p>It marks state updates as non-urgent so React can keep urgent interactions responsive. Typing into an input should feel instant, while recalculating a large filtered list can be deferred or interrupted if the user keeps typing.</p>",
+            "difficulty": "mid",
+            "tags": ["react-18", "concurrency", "performance"],
+            "flashcardFront": "What is a transition in React?",
+            "flashcardBackHtml": "<p>A transition marks a non-urgent update that React may defer or interrupt to keep urgent UI responsive.</p>"
+          },
+          {
+            "question": "Why can Context become a performance problem, and what are the main mitigation strategies?",
+            "answerHtml": "<p>Every consumer re-renders when the provider value identity changes, even if a given consumer only needs one small piece. Mitigations include splitting contexts, memoizing provider values, lifting state down, or using an external store with selectors such as Zustand or Redux.</p>",
+            "difficulty": "senior",
+            "tags": ["context", "performance", "state-management"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and debugging prompts",
+        "items": [
+          {
+            "question": "A list uses array indexes as keys and users report that input values jump between rows. How do you explain the bug?",
+            "answerHtml": "<p>Keys tell React which element identity should be preserved. When indexes are used and the list is reordered or filtered, React may reuse a DOM node or component state for the wrong item. Stable IDs fix the mapping between data identity and UI identity.</p>",
+            "difficulty": "mid",
+            "tags": ["keys", "lists", "debugging"]
+          },
+          {
+            "question": "An effect with an empty dependency array reads stale state. What are the likely fixes?",
+            "answerHtml": "<p>Either add the missing dependency, change the update to use a functional setter, or move mutable live values into a ref if the effect should not re-run. The right fix depends on whether the logic should react to changes or deliberately use the latest value without causing another subscription setup.</p>",
+            "difficulty": "mid",
+            "tags": ["useEffect", "stale-closures", "debugging"]
+          },
+          {
+            "question": "A parent rerenders often and a child is slow. How would you reason about whether to use `React.memo`, `useMemo`, or `useCallback`?",
+            "answerHtml": "<p>Start by measuring first. Use <code>React.memo</code> when a child can safely skip rerenders if props are stable. Use <code>useCallback</code> to stabilize function props and <code>useMemo</code> for expensive derived values or stable object props. Avoid adding memoization everywhere without evidence because it adds complexity and overhead.</p>",
+            "difficulty": "senior",
+            "tags": ["memoization", "performance", "debugging"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

@@ -32,6 +32,83 @@
       "bodyHtml": "<pre><code># Dockerfile best practices (multi-stage)\nFROM node:20-alpine AS builder\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --only=production\nCOPY . .\nRUN npm run build\n\nFROM node:20-alpine AS production\nWORKDIR /app\nRUN addgroup -S app &amp;&amp; adduser -S app -G app\nCOPY --from=builder /app/dist ./dist\nCOPY --from=builder /app/node_modules ./node_modules\nUSER app\nEXPOSE 3000\nCMD [\"node\", \"dist/server.js\"]\n\n# Kubernetes essentials:\n# Pod: smallest unit (1+ containers sharing network/storage)\n# Deployment: declarative desired state + rolling updates\n# Service: stable DNS + load balancing to pod set\n# Ingress: HTTP routing rules (path/host to service)\n# ConfigMap: non-sensitive config as key-value\n# Secret: base64 sensitive data (encrypt at rest with KMS)\n# HPA: autoscale on CPU/memory/custom metric\n\n# Deployment strategies:\n# Rolling: gradual replacement, brief mixed versions\n# Blue/Green: two envs, instant switch, double resources\n# Canary: small % to new version, monitor errors, then promote\n\n# Observability (three pillars):\n# Metrics: Prometheus scrape + Grafana dashboard\n# Logs: ELK stack or Loki + Grafana\n# Traces: OpenTelemetry -&gt; Jaeger / Tempo (distributed tracing)</code></pre>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "What should you clarify before drawing boxes in a system design interview?",
+            "answerHtml": "<p>Clarify product scope, traffic assumptions, read-write ratio, latency goals, consistency expectations, retention, compliance, and critical user flows. Strong candidates spend the first few minutes narrowing the problem so the design answers the real constraints instead of a generic internet-scale fantasy.</p>",
+            "difficulty": "junior",
+            "tags": ["requirements", "interview-strategy", "fundamentals"],
+            "flashcardFront": "First step in system design",
+            "flashcardBackHtml": "<p>Clarify requirements, constraints, and scale before proposing components.</p>"
+          },
+          {
+            "question": "How would you explain CAP theorem without oversimplifying it?",
+            "answerHtml": "<p>During a network partition, a distributed system must choose whether to reject some requests to preserve strong consistency or continue serving potentially stale data for availability. The key nuance is that partition tolerance is not optional once the system is distributed, so the real tradeoff is usually consistency versus availability under failure.</p>",
+            "difficulty": "mid",
+            "tags": ["cap", "distributed-systems", "consistency"],
+            "flashcardFront": "Real CAP tradeoff",
+            "flashcardBackHtml": "<p>In distributed systems you assume partitions can happen, so the tradeoff is usually consistency versus availability during that failure.</p>"
+          },
+          {
+            "question": "When is fan-out on write better than fan-out on read for a feed system?",
+            "answerHtml": "<p>Fan-out on write is better when reads are extremely frequent and follower counts are manageable because it makes reads fast. Fan-out on read is better for celebrity-style skew or when write amplification would be too expensive. Many practical systems use a hybrid model.</p>",
+            "difficulty": "mid",
+            "tags": ["feeds", "caching", "tradeoffs"]
+          }
+        ]
+      },
+      {
+        "title": "Deep-dive follow-ups",
+        "items": [
+          {
+            "question": "How do you decide whether a bottleneck should be solved with caching, sharding, or asynchronous work?",
+            "answerHtml": "<p>Look at the workload shape. Caching helps repeated reads of hot data. Sharding helps when a dataset or write volume no longer fits a single node. Asynchronous work helps when user-facing latency should not wait for slow or non-critical side effects. The right answer depends on whether the pressure is read throughput, write throughput, storage size, or tail latency.</p>",
+            "difficulty": "senior",
+            "tags": ["bottlenecks", "scaling", "tradeoffs"]
+          },
+          {
+            "question": "Why is idempotency a recurring theme in large-scale design questions?",
+            "answerHtml": "<p>Retries happen everywhere: load balancers, clients, workers, and queues all retry on timeouts or failures. Without idempotency, retries turn transient failures into duplicate writes or double charges. Good designs assume retries are normal and make repeated processing safe.</p>",
+            "difficulty": "mid",
+            "tags": ["idempotency", "retries", "reliability"]
+          },
+          {
+            "question": "How would you compare read replicas with sharding in one sentence and then one paragraph?",
+            "answerHtml": "<p>In one sentence: replicas scale reads of the same dataset, while sharding splits the dataset itself across nodes to scale storage and write throughput. In a longer answer, emphasize that replicas improve read capacity but introduce replication lag, whereas sharding increases operational complexity around routing, rebalancing, and cross-shard queries.</p>",
+            "difficulty": "mid",
+            "tags": ["replication", "sharding", "scaling"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and design prompts",
+        "items": [
+          {
+            "question": "Design a URL shortener. What are the first five things you would say out loud?",
+            "answerHtml": "<p>I would clarify expected traffic and read-write ratio, decide whether custom aliases are allowed, choose an ID generation strategy, add a redirect cache such as Redis, and discuss analytics, abuse prevention, and expiration as secondary features after the core redirect path works.</p>",
+            "difficulty": "mid",
+            "tags": ["url-shortener", "design-examples", "interview-strategy"]
+          },
+          {
+            "question": "A chat system must show presence, ordered delivery in a room, and offline catch-up. Which subsystems would you call out immediately?",
+            "answerHtml": "<p>I would call out persistent connections such as WebSockets, a message broker or append-only log, durable storage for history, Redis or similar for presence and ephemeral state, and client or server logic for ordering and acknowledgements. Then I would talk about delivery guarantees and reconnect behavior.</p>",
+            "difficulty": "senior",
+            "tags": ["chat", "realtime", "ordering"]
+          },
+          {
+            "question": "How would you respond if the interviewer says: now make the system multi-region and highly available?",
+            "answerHtml": "<p>I would revisit the consistency model first because multi-region changes correctness as much as infrastructure. Then I would discuss region-local load balancing, replication strategy, failover behavior, conflict handling, data sovereignty if relevant, and what latency-sensitive traffic should stay local versus go cross-region.</p>",
+            "difficulty": "senior",
+            "tags": ["multi-region", "availability", "tradeoffs"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

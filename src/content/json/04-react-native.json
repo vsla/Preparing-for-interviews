@@ -32,6 +32,58 @@
       "bodyHtml": "<pre><code>// Expo Modules API (recommended for new modules)\n// my-module/src/MyModule.ts\nimport { NativeModule, requireNativeModule } from \"expo-modules-core\";\nconst MyModule = requireNativeModule(\"MyModule\");\nexport function doSomethingNative(): Promise&lt;string&gt; {\n  return MyModule.doSomething();\n}\n\n// When to write a native module:\n// - Platform API not in Expo SDK\n// - Performance-critical code (image processing, crypto)\n// - Existing native SDK integration\n\n// TurboModules (new arch): synchronous or async via JSI\n// Legacy Modules (old arch): async JSON bridge only</code></pre>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "How is React Native different from React DOM at the rendering level?",
+            "answerHtml": "<p>React Native still uses React for component and state logic, but it does not render HTML. It maps React components to native platform views through a bridge or newer architecture layers, so layout, gestures, and performance characteristics differ from the browser.</p>",
+            "difficulty": "junior",
+            "tags": ["architecture", "rendering", "native"],
+            "flashcardFront": "What does React Native render?",
+            "flashcardBackHtml": "<p>It renders native platform components rather than DOM elements.</p>"
+          },
+          {
+            "question": "Why does React Native use Flexbox so heavily for layout?",
+            "answerHtml": "<p>Native screens are mostly app-style layouts rather than free-flowing documents, so a flexible one-dimensional layout system fits common mobile UI needs well. React Native also defaults some flex behavior differently from the web, so candidates should mention that they know the platform has its own layout conventions.</p>",
+            "difficulty": "junior",
+            "tags": ["layout", "flexbox", "mobile"]
+          },
+          {
+            "question": "When would you need a native module or bridging work in a React Native app?",
+            "answerHtml": "<p>You need native work when JavaScript APIs are insufficient, such as advanced camera features, Bluetooth, custom native SDKs, or performance-sensitive device integrations. The main tradeoff is more power at the cost of platform-specific maintenance.</p>",
+            "difficulty": "mid",
+            "tags": ["bridging", "native-modules", "platform"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and debugging prompts",
+        "items": [
+          {
+            "question": "A long React Native list scrolls poorly on lower-end devices. What would you investigate first?",
+            "answerHtml": "<p>I would check whether the screen uses a virtualized list such as <code>FlatList</code>, whether items have stable keys, whether expensive rerenders happen on scroll, whether images are oversized, and whether animations or layout recalculation are happening on the JS thread.</p>",
+            "difficulty": "mid",
+            "tags": ["performance", "lists", "debugging"]
+          },
+          {
+            "question": "Navigation state becomes hard to reason about across nested stacks and tabs. How would you simplify it?",
+            "answerHtml": "<p>I would clarify ownership of route params versus global state, reduce cross-screen implicit coupling, and make navigation structure match the product model instead of historical growth. Often the fix is architectural: fewer nested navigators, clearer boundaries, and less business state encoded in navigation.</p>",
+            "difficulty": "senior",
+            "tags": ["navigation", "state", "architecture"]
+          },
+          {
+            "question": "An app works on iOS but breaks on Android. What does that tell you about React Native development?",
+            "answerHtml": "<p>It shows that shared JavaScript does not eliminate platform differences. Permissions, navigation behavior, keyboard handling, native dependency setup, and rendering quirks still need platform-aware testing and design choices.</p>",
+            "difficulty": "mid",
+            "tags": ["ios", "android", "platform-differences"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

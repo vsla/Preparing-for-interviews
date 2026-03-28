@@ -20,6 +20,60 @@
       "bodyHtml": "<pre><code>// Service Worker: intercept network requests, offline caching\nself.addEventListener(\"install\", event =&gt; {\n  event.waitUntil(\n    caches.open(\"v1\").then(cache =&gt; cache.addAll([\"/\", \"/app.js\", \"/style.css\"]))\n  );\n});\n\nself.addEventListener(\"fetch\", event =&gt; {\n  event.respondWith(\n    caches.match(event.request).then(cached =&gt; {\n      const network = fetch(event.request).then(response =&gt; {\n        caches.open(\"v1\").then(c =&gt; c.put(event.request, response.clone()));\n        return response;\n      });\n      return cached || network;  // cache-first\n    })\n  );\n});\n\n// Web Worker: off-main-thread computation\nconst worker = new Worker(\"worker.js\", { type: \"module\" });\nworker.postMessage({ type: \"SORT\", data: hugeArray });\nworker.onmessage = ({ data }) =&gt; displaySortedResults(data);\n\n// worker.js\nself.onmessage = ({ data }) =&gt; {\n  if (data.type === \"SORT\") {\n    const sorted = data.data.sort((a, b) =&gt; a - b);\n    self.postMessage(sorted);\n  }\n};\n\n// SharedArrayBuffer: zero-copy memory sharing with workers\n// Requires: Cross-Origin-Opener-Policy + Cross-Origin-Embedder-Policy headers</code></pre>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "What do LCP, CLS, and INP measure, and why should frontend engineers care?",
+            "answerHtml": "<p>LCP measures how quickly the main visible content appears, CLS measures unexpected layout movement, and INP measures overall responsiveness to user interactions. They matter because they map performance to what users actually feel rather than just bundle size or synthetic lab metrics.</p>",
+            "difficulty": "junior",
+            "tags": ["core-web-vitals", "ux", "metrics"],
+            "flashcardFront": "LCP, CLS, INP",
+            "flashcardBackHtml": "<p>LCP is loading speed of main content, CLS is visual stability, and INP is interaction responsiveness.</p>"
+          },
+          {
+            "question": "What is the critical rendering path in the browser?",
+            "answerHtml": "<p>It is the sequence from HTML download through parsing, CSSOM and DOM creation, render tree construction, layout, paint, and compositing. Scripts and blocking stylesheets can delay this path, which is why loading strategy matters so much.</p>",
+            "difficulty": "mid",
+            "tags": ["rendering", "browser", "performance"],
+            "flashcardFront": "Critical rendering path",
+            "flashcardBackHtml": "<p>It is the browser pipeline that turns downloaded resources into pixels on the screen.</p>"
+          },
+          {
+            "question": "Why can reducing JavaScript bundle size improve more than just download time?",
+            "answerHtml": "<p>Smaller bundles also reduce parse, compile, and execution cost on the main thread. On slower devices this CPU cost is often as important as network transfer time, so code splitting and tree shaking can improve both loading and interactivity.</p>",
+            "difficulty": "mid",
+            "tags": ["bundle-size", "main-thread", "loading"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and debugging prompts",
+        "items": [
+          {
+            "question": "A page looks visually complete quickly but remains hard to interact with for several seconds. What would you investigate?",
+            "answerHtml": "<p>I would inspect main-thread work after paint: hydration cost, large bundles, expensive effects, synchronous data transforms, and long tasks. This is a classic gap between perceived loading and actual interactivity.</p>",
+            "difficulty": "mid",
+            "tags": ["interactivity", "long-tasks", "debugging"]
+          },
+          {
+            "question": "How would you decide between a service worker and a web worker when someone says the app is slow?",
+            "answerHtml": "<p>Use a service worker for network-related concerns such as caching, offline support, and request interception. Use a web worker for CPU-heavy computation that should move off the main thread. They solve very different classes of performance problems.</p>",
+            "difficulty": "mid",
+            "tags": ["service-workers", "web-workers", "architecture"]
+          },
+          {
+            "question": "Images dominate payload size on a landing page. What optimizations would you mention first?",
+            "answerHtml": "<p>I would mention modern formats, responsive image sizing, lazy loading below the fold, CDN delivery, compression, avoiding oversized hero assets, and preloading only the truly critical image. Strong answers tie each tactic to user-visible metrics rather than naming tools randomly.</p>",
+            "difficulty": "junior",
+            "tags": ["images", "cdn", "optimization"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

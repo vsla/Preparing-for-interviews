@@ -1,4 +1,5 @@
 import type { GuideSectionContent } from '../content/guideContent.types';
+import { StudyQuestionBank } from './StudyQuestionBank';
 
 function HtmlChunk({ html }: { html: string }) {
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
@@ -23,6 +24,7 @@ export function SectionContent({ content }: { content: GuideSectionContent }) {
           ))}
         </ul>
       </div>
+      <StudyQuestionBank studyBank={content.studyBank} />
     </>
   );
 }

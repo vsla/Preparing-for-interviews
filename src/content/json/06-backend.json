@@ -28,6 +28,83 @@
       "bodyHtml": "<table>\n  <tbody><tr><th>Aspect</th><th>Monolith</th><th>Microservices</th></tr>\n  <tr><td>Deployment</td><td>Single unit</td><td>Independent services</td></tr>\n  <tr><td>Scale</td><td>Scale entire app</td><td>Scale individual services</td></tr>\n  <tr><td>Development</td><td>Simple, single codebase</td><td>Complex, polyglot possible</td></tr>\n  <tr><td>Failure isolation</td><td>Single point of failure</td><td>Isolated failures</td></tr>\n  <tr><td>Data management</td><td>Shared DB</td><td>DB per service</td></tr>\n  <tr><td>Best for</td><td>Startups, simple domains</td><td>Large teams, complex domains</td></tr>\n</tbody></table>\n\n<pre><code>// Saga Pattern: distributed transactions across services\n// Choreography: services emit events, others react\n// Orchestration: central coordinator directs each service\n\n// Outbox Pattern: guarantee message delivery\n// 1. Write to DB + outbox table in same transaction\n// 2. Background worker reads outbox and publishes to queue\n// 3. Delete from outbox on success\n\n// Strangler Fig: gradually replace monolith\n// Put proxy in front, route features to new services, strangle old code\n\n// BFF (Backend for Frontend): separate API gateway per client type</code></pre>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "How do you explain idempotency in HTTP APIs, and which methods are supposed to be idempotent?",
+            "answerHtml": "<p>An operation is idempotent if repeating it has the same effect as doing it once. <code>GET</code>, <code>PUT</code>, and <code>DELETE</code> are designed to be idempotent conceptually, while <code>POST</code> usually is not unless you add an idempotency key or deduplication layer.</p>",
+            "difficulty": "junior",
+            "tags": ["http", "api-design", "idempotency"],
+            "flashcardFront": "Idempotency definition",
+            "flashcardBackHtml": "<p>Repeating the same request has the same effect as performing it once.</p>"
+          },
+          {
+            "question": "What is the practical difference between authentication and authorization?",
+            "answerHtml": "<p>Authentication answers who the caller is. Authorization answers what that caller is allowed to do. In production systems they are related but separate concerns: a valid identity token does not automatically imply permission for every action.</p>",
+            "difficulty": "junior",
+            "tags": ["auth", "authorization", "security"],
+            "flashcardFront": "Authentication vs authorization",
+            "flashcardBackHtml": "<p>Authentication verifies identity. Authorization checks permissions.</p>"
+          },
+          {
+            "question": "How would you compare cache-aside, write-through, and write-behind strategies?",
+            "answerHtml": "<p>Cache-aside loads data into cache on demand and is simple but can miss on first read. Write-through updates cache and database together for fresher reads but increases write latency. Write-behind acknowledges quickly and persists later, which improves throughput but adds durability and ordering risk.</p>",
+            "difficulty": "mid",
+            "tags": ["caching", "consistency", "performance"]
+          }
+        ]
+      },
+      {
+        "title": "Deep-dive follow-ups",
+        "items": [
+          {
+            "question": "When should an API return `401`, `403`, or `404` for protected resources?",
+            "answerHtml": "<p>Use <code>401</code> when authentication is missing or invalid. Use <code>403</code> when the identity is valid but lacks permission. Sometimes teams intentionally return <code>404</code> to hide resource existence from unauthorized callers, but that is a product and security decision rather than a pure protocol rule.</p>",
+            "difficulty": "mid",
+            "tags": ["http", "status-codes", "security"]
+          },
+          {
+            "question": "What are the tradeoffs between synchronous request-response APIs and asynchronous messaging?",
+            "answerHtml": "<p>Synchronous APIs are simpler for immediate user feedback but create tighter coupling and propagate latency and outages directly. Messaging improves decoupling, buffering, and resilience, but brings eventual consistency, retries, deduplication, and observability complexity.</p>",
+            "difficulty": "senior",
+            "tags": ["messaging", "architecture", "tradeoffs"]
+          },
+          {
+            "question": "How would you justify a monolith instead of microservices in an interview?",
+            "answerHtml": "<p>A monolith is often faster to build, test, deploy, and reason about for a small team or evolving domain. You avoid distributed systems overhead until real scaling, ownership, or deployment constraints justify the complexity of service boundaries. Strong candidates emphasize tradeoffs rather than treating microservices as automatically better.</p>",
+            "difficulty": "senior",
+            "tags": ["monolith", "microservices", "architecture"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and debugging prompts",
+        "items": [
+          {
+            "question": "Clients retry a payment request after a timeout and some users are charged twice. How would you redesign the endpoint?",
+            "answerHtml": "<p>Add an idempotency key tied to the business operation, persist the first result, and return that same result for duplicate retries. The write path must atomically reserve or store the key so duplicates cannot slip through a race.</p>",
+            "difficulty": "senior",
+            "tags": ["payments", "idempotency", "api-design"]
+          },
+          {
+            "question": "A service slows down dramatically during a cache outage. What does that reveal about the architecture?",
+            "answerHtml": "<p>It suggests the system depends too heavily on the cache for correctness or throughput. I would check whether there is request collapsing, rate limiting, graceful degradation, lower TTL fallbacks, and enough database capacity for partial cache misses instead of a full thundering herd.</p>",
+            "difficulty": "senior",
+            "tags": ["caching", "resilience", "debugging"]
+          },
+          {
+            "question": "How would you debug a message-driven workflow where some events are processed twice and others appear out of order?",
+            "answerHtml": "<p>I would verify delivery guarantees, partitioning keys, consumer group behavior, retry logic, and idempotency at the handler level. In distributed messaging, duplicates and ordering gaps are usually design constraints to handle explicitly rather than bugs to wish away.</p>",
+            "difficulty": "senior",
+            "tags": ["messaging", "ordering", "idempotency"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

@@ -48,6 +48,89 @@
       "bodyHtml": "<div class=\"tricky-box\">\n<h4>Output puzzles</h4>\n\n<pre><code>// Q1: What does [] + [] produce?\n[] + []\n// \"\" + \"\" = \"\"  (arrays coerce to strings, empty → \"\")\n\n// Q2: What does {} + [] produce?\n{} + []\n// In statement position: {} is empty block, + [] = +\"\" = 0 → Output: 0\n// As expression: ({}) + [] = \"[object Object]\"\n\n// Q3: [] == false\n[] == false\n// [] → \"\" → 0; false → 0; 0 == 0 → true\n\n// Q4: Closure in var loop\nfor (var i = 0; i &lt; 3; i++) {\n  setTimeout(() =&gt; console.log(i), 0);\n}\n// Output: 3 3 3</code></pre>\n<div class=\"answer\">Answers: \"\", 0 (statement) or \"[object Object]\" (expression), true, 3 3 3</div>\n\n<pre><code>// Q5: Promise execution order\nconsole.log(\"start\");\nsetTimeout(() =&gt; console.log(\"timeout\"), 0);\nPromise.resolve().then(() =&gt; console.log(\"promise1\"))\n  .then(() =&gt; console.log(\"promise2\"));\nconsole.log(\"end\");</code></pre>\n<div class=\"answer\">Output: start, end, promise1, promise2, timeout</div>\n\n<pre><code>// Q6: arguments vs rest\nfunction f() {\n  console.log(arguments[0]);\n}\nconst g = (...args) =&gt; {\n  console.log(args[0]);\n};\nf(1); // 1 — arguments available in regular functions\ng(1); // 1 — args is a real array\n\n// Arrow functions have NO arguments object\nconst h = () =&gt; console.log(arguments); // ReferenceError in strict mode</code></pre>\n\n<pre><code>// Q7: delete\nvar x = 1;\ndelete x;    // false — cannot delete var declarations\nconsole.log(x); // 1 — still there\n\nconst obj = { a: 1 };\ndelete obj.a; // true\nconsole.log(obj.a); // undefined</code></pre>\n\n<pre><code>// Q8: typeof undeclared variable\ntypeof undeclaredVar; // \"undefined\" (no error!)\nundeclaredVar;        // ReferenceError</code></pre>\n\n<pre><code>// Q9: What is printed?\nfunction foo() {\n  return {\n    bar: \"baz\"\n  };\n}\nfunction foo2() {\n  return\n  {\n    bar: \"baz\"  // ASI inserts semicolon after return!\n  };\n}\nfoo();  // { bar: \"baz\" }\nfoo2(); // undefined ← Automatic Semicolon Insertion!</code></pre>\n</div>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "Why is `typeof null` equal to `object`, and how would you explain that in an interview without sounding hand-wavy?",
+            "answerHtml": "<p>It is a historical bug from the first implementation of JavaScript. The type tag for objects overlapped with the internal representation for <code>null</code>, and the behavior stayed for backward compatibility. The practical answer is that <code>null</code> is a primitive, so use <code>value === null</code> instead of <code>typeof</code>.</p>",
+            "difficulty": "junior",
+            "tags": ["types", "coercion", "primitives"],
+            "flashcardFront": "How do you check for null safely?",
+            "flashcardBackHtml": "<p>Use <code>value === null</code>. Do not rely on <code>typeof null</code>.</p>"
+          },
+          {
+            "question": "What is a closure, and what real engineering problems does it solve beyond toy counter examples?",
+            "answerHtml": "<p>A closure is a function that keeps access to variables from its lexical scope after the outer function returns. In real code it powers memoization, private state, factory functions, currying, and React hook callbacks that capture render-time values.</p>",
+            "difficulty": "junior",
+            "tags": ["closures", "scope", "functions"],
+            "flashcardFront": "Closure definition",
+            "flashcardBackHtml": "<p>A closure is a function plus the lexical environment it captured when it was created.</p>"
+          },
+          {
+            "question": "How would you explain the event loop order between synchronous code, microtasks, and macrotasks?",
+            "answerHtml": "<p>Run synchronous code first until the call stack is empty. Then drain the microtask queue completely, including microtasks scheduled by other microtasks. After that, the runtime takes one macrotask such as <code>setTimeout</code> or I/O, runs it, and repeats. That is why promise callbacks usually run before timers.</p>",
+            "difficulty": "mid",
+            "tags": ["event-loop", "async", "promises"],
+            "flashcardFront": "What runs before setTimeout: promises or timers?",
+            "flashcardBackHtml": "<p>Promise callbacks run first because they are microtasks and timers are macrotasks.</p>"
+          }
+        ]
+      },
+      {
+        "title": "Deep-dive follow-ups",
+        "items": [
+          {
+            "question": "Why does `[] == false` evaluate to true, and what lesson should you take from that result?",
+            "answerHtml": "<p>The abstract equality algorithm coerces <code>[]</code> to an empty string, then to <code>0</code>; <code>false</code> also coerces to <code>0</code>, so the result is true. The lesson is not to memorize every weird case, but to avoid <code>==</code> for application logic unless you intentionally want coercion.</p>",
+            "difficulty": "mid",
+            "tags": ["coercion", "equality", "tricky"],
+            "flashcardFront": "Why is [] == false true?",
+            "flashcardBackHtml": "<p>Both sides coerce to <code>0</code> under abstract equality.</p>"
+          },
+          {
+            "question": "What is the difference between prototype-based inheritance and classical inheritance in JavaScript interviews?",
+            "answerHtml": "<p>Objects in JavaScript inherit from other objects through the prototype chain. Classes are mostly syntax sugar on top of that system. In interviews, the strong answer is that methods are normally shared through prototypes, property lookup walks up the chain, and <code>class</code> does not replace the underlying prototype model.</p>",
+            "difficulty": "mid",
+            "tags": ["prototype", "inheritance", "class"],
+            "flashcardFront": "What do JavaScript classes compile down to conceptually?",
+            "flashcardBackHtml": "<p>They are syntax sugar over constructor functions and prototype-based inheritance.</p>"
+          },
+          {
+            "question": "When would you choose `Promise.all`, `allSettled`, `race`, or `any`?",
+            "answerHtml": "<p>Use <code>Promise.all</code> when every result is required and one failure should fail the whole operation. Use <code>allSettled</code> when you need a full report of successes and failures. Use <code>race</code> when the first settled result wins, such as a timeout guard. Use <code>any</code> when you want the first successful result and are okay ignoring earlier failures.</p>",
+            "difficulty": "mid",
+            "tags": ["promises", "async", "combinators"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and debugging prompts",
+        "items": [
+          {
+            "question": "A loop with `var` and `setTimeout` logs `3 3 3` instead of `0 1 2`. How do you explain the root cause and fix it?",
+            "answerHtml": "<p>The callbacks all close over the same function-scoped <code>i</code> binding. By the time they run, the loop has finished and <code>i</code> is <code>3</code>. Fix it with <code>let</code> so each iteration gets a new binding, or with an IIFE that captures the current value.</p>",
+            "difficulty": "junior",
+            "tags": ["closures", "var-vs-let", "debugging"]
+          },
+          {
+            "question": "A Node or browser app is getting slower over time. What JavaScript-level memory leak patterns would you check first?",
+            "answerHtml": "<p>Check for long-lived timers, event listeners that are never removed, closures keeping large objects reachable, caches without eviction, detached DOM nodes, and global state that keeps references forever. The key concept is reachability: if something is still referenced from a root, the garbage collector cannot free it.</p>",
+            "difficulty": "senior",
+            "tags": ["memory", "garbage-collection", "performance"]
+          },
+          {
+            "question": "How would you answer the interview prompt: async and await are just syntax sugar over promises?",
+            "answerHtml": "<p>Yes, because an <code>async</code> function still returns a promise and <code>await</code> just pauses the async function until the awaited promise settles. The deeper point is readability and structured error handling: <code>try/catch</code> often makes sequential async logic easier to reason about than long promise chains.</p>",
+            "difficulty": "mid",
+            "tags": ["async-await", "promises", "explanation"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

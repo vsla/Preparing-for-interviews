@@ -24,6 +24,60 @@
       "bodyHtml": "<pre><code>// Never commit secrets to git\n// .env: local development only, in .gitignore\n// Production: dedicated secrets manager\n\n// AWS Secrets Manager\nimport { SecretsManagerClient, GetSecretValueCommand } from \"@aws-sdk/client-secrets-manager\";\nconst { SecretString } = await client.send(\n  new GetSecretValueCommand({ SecretId: \"prod/db/password\" })\n);\n\n// Rotate secrets regularly\n// Principle of least privilege: each service gets only the secrets it needs\n// Secret scanning: GitHub secret scanning, gitleaks, truffleHog\n// Never log sensitive data: passwords, tokens, credit card numbers, PII\n\n// Dependency security\nnpm audit                         // check for known CVEs\nnpm audit fix                     // auto-fix safe updates\nnpm audit fix --force             // CAREFUL: may break things\n// Dependabot: automated PRs for security updates\n// Snyk: deeper scanning, fix PRs, container scanning\n\n// Security headers with helmet.js\nimport helmet from \"helmet\";\napp.use(helmet({\n  contentSecurityPolicy: {\n    directives: {\n      defaultSrc: [\"'self'\"],\n      scriptSrc: [\"'self'\"],\n      styleSrc: [\"'self'\", \"'unsafe-inline'\"],\n    }\n  },\n  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },\n  frameguard: { action: \"deny\" },\n  noSniff: true,\n  referrerPolicy: { policy: \"strict-origin-when-cross-origin\" }\n}));</code></pre>"
     }
   ],
+  "studyBank": {
+    "questionGroups": [
+      {
+        "title": "Core interview questions",
+        "items": [
+          {
+            "question": "What problem does HTTPS actually solve beyond encrypting traffic?",
+            "answerHtml": "<p>HTTPS provides confidentiality, integrity, and server authentication. It prevents eavesdropping, makes tampering much harder, and lets the client verify it is talking to the intended server through the certificate chain.</p>",
+            "difficulty": "junior",
+            "tags": ["https", "tls", "transport-security"],
+            "flashcardFront": "What does HTTPS guarantee?",
+            "flashcardBackHtml": "<p>Confidentiality, integrity, and authenticated server identity.</p>"
+          },
+          {
+            "question": "How do XSS and CSRF differ, and why do people mix them up?",
+            "answerHtml": "<p>XSS is about injecting and executing attacker-controlled script in a trusted page. CSRF is about tricking a browser that already has valid credentials into making an unwanted state-changing request. They are both browser threats, but the attack paths and mitigations differ.</p>",
+            "difficulty": "junior",
+            "tags": ["xss", "csrf", "web-security"],
+            "flashcardFront": "XSS vs CSRF",
+            "flashcardBackHtml": "<p>XSS executes malicious script in the page; CSRF tricks an authenticated browser into sending an unwanted request.</p>"
+          },
+          {
+            "question": "Why should passwords be hashed with bcrypt, scrypt, or Argon2 instead of a fast hash function?",
+            "answerHtml": "<p>Password hashing should be intentionally slow and salted to make large-scale guessing expensive. Fast hashes such as SHA-256 are good for integrity checks but too cheap for password storage because attackers can brute-force them much faster.</p>",
+            "difficulty": "junior",
+            "tags": ["passwords", "hashing", "auth"]
+          }
+        ]
+      },
+      {
+        "title": "Scenario and threat-model prompts",
+        "items": [
+          {
+            "question": "A team wants to store JWTs in localStorage because it is easy. What tradeoff would you explain?",
+            "answerHtml": "<p>The main tradeoff is XSS exposure. If malicious script runs in the page, localStorage tokens are easy to read. HttpOnly cookies reduce direct script access but reintroduce CSRF considerations, so the correct choice depends on the threat model and deployment architecture.</p>",
+            "difficulty": "mid",
+            "tags": ["jwt", "cookies", "xss"]
+          },
+          {
+            "question": "How would you prioritize fixes if a dependency scanner reports many vulnerabilities at once?",
+            "answerHtml": "<p>I would prioritize by exploitability, production reachability, public exposure, severity, and patch availability. Not every CVE has the same real-world risk, so the best answer balances urgency with whether the vulnerable code path is actually used.</p>",
+            "difficulty": "mid",
+            "tags": ["dependencies", "risk", "triage"]
+          },
+          {
+            "question": "What would you do if you suspect secrets were accidentally committed to a repository?",
+            "answerHtml": "<p>Rotate the secrets first, because history rewriting does not make leaked credentials safe again. Then remove them from code, move them to proper secret storage, audit access logs if available, and clean the repository history if policy requires it.</p>",
+            "difficulty": "mid",
+            "tags": ["secrets", "incident-response", "git"]
+          }
+        ]
+      }
+    ]
+  },
   "keyTakeaways": {
     "title": "⚡ Key Takeaways",
     "itemsHtml": [

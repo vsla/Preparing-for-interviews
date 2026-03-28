@@ -1,5 +1,7 @@
 import { sectionManifest, type GuideSectionMeta } from './manifest';
 import type { GuideSectionContent } from './guideContent.types';
+import { getLocalizedNavLabel, localizeSectionContent } from './localeContent';
+import type { Locale } from '../i18n';
 
 import json01 from './json/01-javascript.json';
 import json02 from './json/02-css.json';
@@ -60,11 +62,14 @@ export type GuideSection = GuideSectionMeta & {
   content: GuideSectionContent;
 };
 
-export const guideSections: GuideSection[] = sectionManifest.map((meta, i) => {
-  const content = contents[i]!;
-  return {
-    ...meta,
-    navCount: String(content.topics.length),
-    content,
-  };
-});
+export function getGuideSections(locale: Locale): GuideSection[] {
+  return sectionManifest.map((meta, i) => {
+    const content = localizeSectionContent(locale, contents[i]!);
+    return {
+      ...meta,
+      navLabel: getLocalizedNavLabel(locale, i, meta.navLabel),
+      navCount: String(content.topics.length),
+      content,
+    };
+  });
+}

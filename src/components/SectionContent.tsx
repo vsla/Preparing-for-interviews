@@ -1,11 +1,12 @@
 import type { GuideSectionContent } from '../content/guideContent.types';
+import type { UiStrings } from '../i18n';
 import { StudyQuestionBank } from './StudyQuestionBank';
 
 function HtmlChunk({ html }: { html: string }) {
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-export function SectionContent({ content }: { content: GuideSectionContent }) {
+export function SectionContent({ content, strings }: { content: GuideSectionContent; strings: UiStrings }) {
   return (
     <>
       <HtmlChunk html={content.headerHtml} />
@@ -24,7 +25,7 @@ export function SectionContent({ content }: { content: GuideSectionContent }) {
           ))}
         </ul>
       </div>
-      <StudyQuestionBank studyBank={content.studyBank} />
+      <StudyQuestionBank studyBank={content.studyBank} strings={strings} />
     </>
   );
 }

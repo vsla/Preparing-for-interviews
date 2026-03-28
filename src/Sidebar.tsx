@@ -1,4 +1,6 @@
 import type { RefObject } from 'react';
+import { LocaleSwitcher } from './components/LocaleSwitcher';
+import type { Locale, UiStrings } from './i18n';
 import { closeSidebarOnNavIfMobile } from './hooks/useGuideChrome';
 
 type SidebarProps = {
@@ -12,9 +14,12 @@ type SidebarProps = {
     navCount: string;
   }>;
   sidebarRef: RefObject<HTMLElement | null>;
+  strings: UiStrings;
+  locale: Locale;
+  onLocaleChange: (locale: Locale) => void;
 };
 
-export function Sidebar({ open, onToggle, activeSections, items, sidebarRef }: SidebarProps) {
+export function Sidebar({ open, onToggle, activeSections, items, sidebarRef, strings, locale, onLocaleChange }: SidebarProps) {
   return (
     <aside
       ref={sidebarRef}
@@ -22,12 +27,20 @@ export function Sidebar({ open, onToggle, activeSections, items, sidebarRef }: S
       id="sidebar"
     >
       <div className="sidebar-header">
-        <span className="sidebar-title">Interview Guide</span>
+        <div className="sidebar-header-main">
+          <span className="sidebar-title">{strings.sidebarTitle}</span>
+          <LocaleSwitcher
+            strings={strings}
+            locale={locale}
+            onLocaleChange={onLocaleChange}
+            className="sidebar-locale-switcher"
+          />
+        </div>
         <button
           type="button"
           className="sidebar-toggle"
           id="sidebarToggle"
-          aria-label="Toggle navigation"
+          aria-label={strings.toggleNavigationAriaLabel}
           onClick={onToggle}
         >
           <span />
@@ -35,7 +48,7 @@ export function Sidebar({ open, onToggle, activeSections, items, sidebarRef }: S
           <span />
         </button>
       </div>
-      <nav className="sidebar-nav" aria-label="Section navigation">
+      <nav className="sidebar-nav" aria-label={strings.navAriaLabel}>
         <ul>
           {items.map((item) => (
             <li key={item.id} className={`nav-item ${item.navClass}`}>
